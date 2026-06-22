@@ -26,6 +26,7 @@ the documented foundation for the project before any code is written.
 | [improvements.md](./improvements.md) | Implementation-focused improvement backlog |
 | [dlq-policy.md](./dlq-policy.md) | Dead Letter Queue & agent health policy |
 | [schemas/blackboard.schema.json](./schemas/blackboard.schema.json) | Versioned JSON Schema for the shared Blackboard |
+| [rapid-validation-framework.md](./rapid-validation-framework.md) | BYI Rapid Validation Framework — validate an offer in ≤14 days |
 
 ## Three core principles
 
