@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://byoungimprovements.com/schemas/blackboard/v1.json",
+  "title": "Blueprint Builder Blackboard Entry",
+  "description": "Versioned schema for a single entry on the shared Blackboard. All agent crews MUST read and write entries that conform to this schema so that output from one crew (e.g. Market Intelligence) can be ingested by another (e.g. Content Factory) without custom parsing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task_id",
+    "crew",
+    "producer_agent",
+    "artifact_type",
+    "status",
+    "created_at",
+    "updated_at",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Semantic version of this Blackboard schema. Consumers MUST reject entries whose major version they do not support.",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "examples": ["1.0.0"]
+    },
+    "task_id": {
+      "description": "Unique identifier for the task this entry belongs to. Used as the key to retrieve the full record after a lightweight event is published.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "parent_task_id": {
+      "description": "Optional task_id of the parent task, for sub-tasks delegated by an Orchestrator.",
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "crew": {
+      "description": "The crew that produced this entry.",
+      "type": "string",
+      "enum": [
+        "market_intelligence",
+        "content_factory",
+        "marketing_distribution",
+        "automated_service_delivery"
+      ]
+    },
+    "producer_agent": {
+      "description": "Role of the agent that wrote this entry (e.g. 'trend_spotter', 'scriptwriter').",
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_type": {
+      "description": "The kind of artifact stored in payload. Consumers subscribe to the artifact_types they can ingest.",
+      "type": "string",
+      "examples": [
+        "intelligence_brief",
+        "content_outline",
+        "script",
+        "voiceover_ref",
+        "video_package",
+        "distribution_plan"
+      ]
+    },
+    "status": {
+      "description": "Lifecycle state of the artifact. AWAITING_APPROVAL signals a Human-in-the-Loop hold; downstream crews MUST NOT consume an entry until it reaches APPROVED (or COMPLETE for non-gated artifacts).",
+      "type": "string",
+      "enum": [
+        "IN_PROGRESS",
+        "COMPLETE",
+        "AWAITING_APPROVAL",
+        "APPROVED",
+        "REJECTED",
+        "FAILED"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "references": {
+      "description": "Pointers to large binary assets stored outside the Blackboard (e.g. S3 / object storage URIs for video, audio, images).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "uri"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "examples": ["video", "audio", "image", "document"]
+          },
+          "uri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "content_type": {
+            "type": "string",
+            "examples": ["video/mp4", "audio/mpeg", "image/png"]
+          }
+        }
+      }
+    },
+    "payload": {
+      "description": "The artifact data itself. Structure is determined by artifact_type; kept as a free-form object so each crew can define its own typed sub-schema while remaining within the common envelope.",
+      "type": "object"
+    },
+    "metadata": {
+      "description": "Optional operational metadata not part of the artifact (cost, model used, token counts, trace id).",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "model": { "type": "string" },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "trace_id": { "type": "string" },
+        "task_complexity_score": {
+          "description": "Score used by the Orchestrator to decide serverless vs. containerized execution.",
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
