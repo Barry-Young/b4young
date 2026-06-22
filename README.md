@@ -1,5 +1,7 @@
 ### Hi there 👋
 
+📐 **Blueprint Builder** architecture docs live in [`docs/`](./docs/README.md).
+
 <!--
 **b4young/b4young** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
