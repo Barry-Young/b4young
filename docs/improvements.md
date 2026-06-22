@@ -17,12 +17,13 @@ item to formalize as the system is built.
   types, the system should automatically flag those phrases for blacklisting in
   the Constitution, creating a self-healing governance model.
 
-- [ ] **Formalize "Agent Health" & Dead Letter Queues (DLQ).** While the
+- [x] **Formalize "Agent Health" & Dead Letter Queues (DLQ).** While the
   architecture discusses resilience, it lacks a defined protocol for "dead"
   agents. Add a section on implementing Dead Letter Queues (DLQs) for the
   event-driven bus. If an agent fails to process an event after *N* retries, the
   event should be moved to a DLQ for human review, and the agent should be
   automatically "rebooted" or quarantined to prevent resource exhaustion.
+  → Drafted in [dlq-policy.md](./dlq-policy.md).
 
 - [ ] **Version Control for "Prompt-as-Code."** To elevate the Brand
   Constitution, treat it as a software repository rather than a document. Adopt a
@@ -31,12 +32,13 @@ item to formalize as the system is built.
   a "golden dataset" before deployment. This ensures changes to the brand voice
   are versioned and auditable.
 
-- [ ] **Blackboard Schema Standardization.** To avoid integration friction
+- [x] **Blackboard Schema Standardization.** To avoid integration friction
   between different agent crews, define a strict schema for the *Blackboard*.
   Mandate that all agents read/write using a versioned JSON schema. This ensures
   the *Market Intelligence* crew produces output that the *Content Factory* can
   immediately ingest without custom parsing, significantly reducing operational
-  fragility.
+  fragility. → Drafted in
+  [schemas/blackboard.schema.json](./schemas/blackboard.schema.json).
 
 - [ ] **Operationalizing "Human-in-the-Loop" (HITL) Logic.** Move HITL from a
   conceptual checkpoint to a formal API state. Define an `AWAITING_APPROVAL`
@@ -59,11 +61,12 @@ item to formalize as the system is built.
   current `MarketIntelligenceCrew` Python scripts, ensuring that the documentation
   reflects the actual asynchronous communication patterns being coded.
 
-## Proposed Next Artifacts
+## Next Artifacts
 
-Two concrete artifacts would directly advance this backlog and standardize
-communication between agent crews:
+Two concrete artifacts that advance this backlog and standardize communication
+between agent crews have been drafted:
 
-1. A sample **Dead Letter Queue (DLQ) policy** for the event-driven bus.
-2. A **JSON schema template for the Blackboard** to standardize inter-crew
-   communication.
+1. ✅ A sample **Dead Letter Queue (DLQ) policy** for the event-driven bus —
+   [dlq-policy.md](./dlq-policy.md).
+2. ✅ A **JSON schema template for the Blackboard** to standardize inter-crew
+   communication — [schemas/blackboard.schema.json](./schemas/blackboard.schema.json).

@@ -24,6 +24,8 @@ the documented foundation for the project before any code is written.
 | [05-governance-security.md](./05-governance-security.md) | Brand Constitution, security posture, and human-in-the-loop oversight |
 | [06-roadmap.md](./06-roadmap.md) | The five-phase implementation roadmap |
 | [improvements.md](./improvements.md) | Implementation-focused improvement backlog |
+| [dlq-policy.md](./dlq-policy.md) | Dead Letter Queue & agent health policy |
+| [schemas/blackboard.schema.json](./schemas/blackboard.schema.json) | Versioned JSON Schema for the shared Blackboard |
 
 ## Three core principles
 
