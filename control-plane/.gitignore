@@ -1,0 +1,6 @@
+# Local persisted state (blueprints, activity) — runtime data, not source
+data/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

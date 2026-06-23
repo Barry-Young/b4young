@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blueprint Builder — Control Plane</title>
+  <style>
+    :root { --bg:#0f172a; --card:#1e293b; --ink:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; --ok:#22c55e; --bad:#ef4444; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+    header { padding:1rem 1.5rem; border-bottom:1px solid #334155; }
+    header h1 { margin:0; font-size:1.2rem; }
+    header .meta { color:var(--muted); font-size:.85rem; }
+    main { display:grid; grid-template-columns: 1fr 1fr; gap:1rem; padding:1.5rem; }
+    @media (max-width: 900px){ main { grid-template-columns:1fr; } }
+    .card { background:var(--card); border:1px solid #334155; border-radius:10px; padding:1rem 1.25rem; }
+    .card h2 { margin-top:0; font-size:1rem; color:var(--accent); }
+    .full { grid-column:1 / -1; }
+    label { display:block; font-size:.8rem; color:var(--muted); margin:.5rem 0 .15rem; }
+    input, textarea, select { width:100%; padding:.45rem .6rem; background:#0b1220; color:var(--ink);
+      border:1px solid #334155; border-radius:6px; font-size:.85rem; }
+    button { margin-top:.6rem; padding:.45rem .9rem; background:var(--accent); color:#03263a; border:none;
+      border-radius:6px; font-weight:600; cursor:pointer; }
+    button.secondary { background:#334155; color:var(--ink); }
+    table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    th, td { text-align:left; padding:.4rem .5rem; border-bottom:1px solid #334155; vertical-align:top; }
+    .tag { display:inline-block; padding:.05rem .4rem; border-radius:999px; font-size:.7rem; background:#334155; }
+    .status-COMPLETE { color:var(--ok); }
+    .status-FAILED { color:var(--bad); }
+    .status-RUNNING { color:var(--accent); }
+    .flag { color:#fbbf24; font-size:.75rem; }
+    pre { white-space:pre-wrap; margin:.2rem 0 0; color:var(--muted); font-size:.78rem; }
+    .inline { display:flex; gap:.4rem; }
+    .inline input { flex:1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🛠️ Blueprint Builder — Control Plane</h1>
+    <div class="meta">v{{ version }} · Brand Constitution v{{ constitution.version }} · {{ blueprints|length }} blueprint(s)</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Define an Agent Blueprint</h2>
+      <form method="post" action="/ui/blueprints">
+        <label>Name</label><input name="name" required placeholder="Trend Spotter" />
+        <label>Role</label><input name="role" required placeholder="Trend Analyst" />
+        <label>Goal</label><input name="goal" required placeholder="Detect emerging trends in the niche" />
+        <label>Backstory</label><textarea name="backstory" rows="2" placeholder="Context that primes the model"></textarea>
+        <label>Tools (comma-separated)</label><input name="tools" placeholder="social_listening_api, web_scraper" />
+        <label>Model</label><input name="model" value="stub" />
+        <button type="submit">Create blueprint</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Secure Key Vault</h2>
+      <p class="meta">Secrets are held in memory only and never returned — only a masked preview is shown.</p>
+      <form method="post" action="/ui/vault/keys" class="inline">
+        <input name="name" placeholder="ANTHROPIC" required />
+        <input name="value" placeholder="secret value" required />
+        <button type="submit">Set</button>
+      </form>
+      <table>
+        <thead><tr><th>Key</th><th>Set</th><th>Preview</th></tr></thead>
+        <tbody>
+        {% for k in keys %}
+          <tr><td>{{ k.name }}</td><td>{{ "✓" if k.is_set else "—" }}</td><td><code>{{ k.preview }}</code></td></tr>
+        {% else %}
+          <tr><td colspan="3" class="meta">No keys set.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card full">
+      <h2>Agent Blueprints</h2>
+      <table>
+        <thead><tr><th>Name</th><th>Role</th><th>Goal</th><th>Model</th><th>Run</th></tr></thead>
+        <tbody>
+        {% for bp in blueprints %}
+          <tr>
+            <td>{{ bp.name }}</td>
+            <td>{{ bp.role }}</td>
+            <td>{{ bp.goal }}</td>
+            <td><span class="tag">{{ bp.model }}</span></td>
+            <td>
+              <form method="post" action="/ui/blueprints/{{ bp.id }}/run" class="inline">
+                <input name="task_input" placeholder="task input…" />
+                <button type="submit" class="secondary">Run</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="meta">No blueprints yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card full">
+      <h2>Activity Log</h2>
+      <table>
+        <thead><tr><th>When</th><th>Agent</th><th>Status</th><th>Output</th></tr></thead>
+        <tbody>
+        {% for a in activity %}
+          <tr>
+            <td class="meta">{{ a.started_at }}</td>
+            <td>{{ a.blueprint_name }}</td>
+            <td class="status-{{ a.status.value }}">{{ a.status.value }}{% if a.duration_ms is not none %} · {{ a.duration_ms }}ms{% endif %}</td>
+            <td>
+              <pre>{{ a.output or a.error or "" }}</pre>
+              {% for f in a.governance_flags %}<div class="flag">⚠ {{ f }}</div>{% endfor %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="meta">No activity yet — run an agent above.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
