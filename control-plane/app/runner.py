@@ -10,10 +10,18 @@ from __future__ import annotations
 
 from datetime import timezone
 
+from . import crews as crew_registry
 from .constitution import BrandConstitution
-from .models import ActivityLogEntry, AgentBlueprint, RunStatus
+from .crews.blackboard import Blackboard
+from .models import (
+    ActivityLogEntry,
+    AgentBlueprint,
+    CrewName,
+    CrewRunResult,
+    RunStatus,
+)
 from .providers import get_provider
-from .store import ActivityStore
+from .store import ActivityStore, BlackboardStore
 from .vault import Vault
 
 
@@ -53,3 +61,61 @@ def _utcnow(entry: ActivityLogEntry):
 
     # started_at is tz-aware; keep finished_at consistent.
     return datetime.now(timezone.utc)
+
+
+def run_crew(
+    crew_key: CrewName,
+    directive: str,
+    *,
+    vault: Vault,
+    constitution: BrandConstitution,
+    activity: ActivityStore,
+    blackboard_store: BlackboardStore,
+) -> CrewRunResult:
+    """Deploy and run a crew, persisting Blackboard entries and logging the run."""
+    from datetime import datetime
+
+    blackboard = Blackboard(blackboard_store)
+    crew = crew_registry.build_crew(
+        crew_key, blackboard=blackboard, vault=vault, constitution=constitution
+    )
+
+    log = ActivityLogEntry(
+        blueprint_id=f"crew:{crew_key.value}",
+        blueprint_name=crew.display_name,
+        status=RunStatus.RUNNING,
+        input=directive,
+    )
+    try:
+        report, entries, final_task_id = crew.run(directive)
+        flags = sorted(
+            {
+                flag
+                for entry in entries
+                for flag in (entry.metadata or {}).get("governance_flags", [])
+            }
+        )
+        log.output = report
+        log.governance_flags = flags
+        log.status = RunStatus.COMPLETE
+    except Exception as exc:  # noqa: BLE001
+        log.status = RunStatus.FAILED
+        log.error = f"{type(exc).__name__}: {exc}"
+        log.finished_at = datetime.now(timezone.utc)
+        log.duration_ms = int((log.finished_at - log.started_at).total_seconds() * 1000)
+        activity.add(log)
+        raise
+
+    log.finished_at = datetime.now(timezone.utc)
+    log.duration_ms = int((log.finished_at - log.started_at).total_seconds() * 1000)
+    activity.add(log)
+
+    return CrewRunResult(
+        crew=crew_key,
+        directive=directive,
+        report=report,
+        final_task_id=final_task_id,
+        entries=entries,
+        activity_id=log.id,
+        governance_flags=flags,
+    )

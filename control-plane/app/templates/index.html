@@ -100,6 +100,56 @@
     </section>
 
     <section class="card full">
+      <h2>Crews (Data Plane)</h2>
+      <table>
+        <thead><tr><th>Crew</th><th>Description</th><th>Deploy &amp; Run</th></tr></thead>
+        <tbody>
+        {% for c in crews %}
+          <tr>
+            <td>{{ c.display_name }}</td>
+            <td class="meta">{{ c.description }}</td>
+            <td>
+              <form method="post" action="/ui/crews/{{ c.key.value }}/run" class="inline">
+                <input name="directive" placeholder="strategic directive…" />
+                <button type="submit" class="secondary">Run crew</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="meta">No crews registered.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card full">
+      <h2>Blackboard</h2>
+      <table>
+        <thead><tr><th>When</th><th>Crew</th><th>Producer</th><th>Artifact</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for e in blackboard %}
+          <tr>
+            <td class="meta">{{ e.created_at }}</td>
+            <td>{{ e.crew.value }}</td>
+            <td>{{ e.producer_agent }}</td>
+            <td><span class="tag">{{ e.artifact_type }}</span></td>
+            <td>
+              {{ e.status.value }}
+              {% if e.status.value == "AWAITING_APPROVAL" %}
+                <form method="post" action="/ui/blackboard/{{ e.task_id }}/approve" style="display:inline">
+                  <button type="submit">Approve</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="meta">No Blackboard entries — run a crew above.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card full">
       <h2>Activity Log</h2>
       <table>
         <thead><tr><th>When</th><th>Agent</th><th>Status</th><th>Output</th></tr></thead>
