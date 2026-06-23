@@ -14,7 +14,7 @@ import json
 import threading
 from pathlib import Path
 
-from .models import ActivityLogEntry, AgentBlueprint
+from .models import ActivityLogEntry, AgentBlueprint, BlackboardEntry
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
@@ -79,8 +79,43 @@ class ActivityStore(_JsonRepository):
         return [ActivityLogEntry(**row) for row in rows[:limit]]
 
 
-def build_stores(data_dir: Path = DATA_DIR) -> tuple[BlueprintStore, ActivityStore]:
+class BlackboardStore(_JsonRepository):
+    """Persistent store of Blackboard entries, keyed by task_id."""
+
+    def add(self, entry: BlackboardEntry) -> BlackboardEntry:
+        with self._lock:
+            rows = self._read()
+            rows.append(json.loads(entry.model_dump_json()))
+            self._write(rows)
+        return entry
+
+    def get(self, task_id: str) -> BlackboardEntry | None:
+        for row in self._read():
+            if row["task_id"] == task_id:
+                return BlackboardEntry(**row)
+        return None
+
+    def update(self, entry: BlackboardEntry) -> BlackboardEntry:
+        with self._lock:
+            rows = self._read()
+            for i, row in enumerate(rows):
+                if row["task_id"] == entry.task_id:
+                    rows[i] = json.loads(entry.model_dump_json())
+                    break
+            self._write(rows)
+        return entry
+
+    def list(self, limit: int = 50) -> list[BlackboardEntry]:
+        rows = self._read()
+        rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+        return [BlackboardEntry(**row) for row in rows[:limit]]
+
+
+def build_stores(
+    data_dir: Path = DATA_DIR,
+) -> tuple[BlueprintStore, ActivityStore, BlackboardStore]:
     return (
         BlueprintStore(data_dir / "blueprints.json"),
         ActivityStore(data_dir / "activity.json"),
+        BlackboardStore(data_dir / "blackboard.json"),
     )

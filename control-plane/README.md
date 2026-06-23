@@ -1,7 +1,12 @@
-# Control Plane (Phase 1 MVP)
+# Control Plane + Data Plane
 
-The strategic core of the Blueprint Builder system. This MVP implements the
-[Phase 1 roadmap milestones](../docs/06-roadmap.md#61-phase-1-foundational-infrastructure-and-control-plane-mvp):
+The strategic core of the Blueprint Builder system (Control Plane) plus a first
+slice of the **Data Plane** — runnable agent crews coordinated over a shared
+Blackboard.
+
+## Control Plane (Phase 1 MVP)
+
+Implements the [Phase 1 roadmap milestones](../docs/06-roadmap.md#61-phase-1-foundational-infrastructure-and-control-plane-mvp):
 
 - **Agent Design Studio (minimal):** define agent blueprints — Role, Goal,
   Backstory, Tools, Model — via API or the web UI.
@@ -15,6 +20,30 @@ The strategic core of the Blueprint Builder system. This MVP implements the
 The agent runner uses a deterministic **stub** provider, so the system runs with
 no external dependencies. A real LLM provider can be added in
 [`app/providers.py`](./app/providers.py) (pull credentials from the vault).
+
+## Data Plane: crews + Blackboard (Phase 2 start)
+
+The Control Plane can now deploy and run **agent crews**
+([docs/02](../docs/02-multi-agent-ecosystem.md), [docs/03](../docs/03-agent-crews.md)):
+
+- **Crews & Orchestrator-Worker:** the **Market Intelligence** crew (Chief
+  Strategist + Trend Spotter + Competitor Analyst + Audience Profiler) runs its
+  workers, then the orchestrator synthesizes a brief.
+- **Shared Blackboard:** every artifact is written as an entry that conforms to
+  the versioned [`docs/schemas/blackboard.schema.json`](../docs/schemas/blackboard.schema.json)
+  (a test validates conformance against that file) and is persisted for
+  inspection and cross-crew consumption.
+- **Event bus:** agents publish completion events over a synchronous pub/sub bus
+  (swap-in transport later).
+- **Human-in-the-Loop gate:** the orchestrator's final brief is parked in
+  `AWAITING_APPROVAL`; approve it via `POST /api/blackboard/{task_id}/approve`
+  (or the dashboard) to advance it to `APPROVED`.
+
+The crew runtime is adapted from the standalone reference at
+[`reference/blueprint_builder_v1.py`](./reference/blueprint_builder_v1.py),
+unified with the Control Plane's provider abstraction, Brand Constitution, and
+activity log. Add more crews by implementing a builder under `app/crews/` and
+registering it in `app/crews/__init__.py`.
 
 ## Quickstart
 
@@ -44,6 +73,10 @@ immediately to confirm the Control Plane can deploy, run, and monitor an agent
 | `GET` | `/api/activity` | Recent activity log |
 | `GET` | `/api/vault/keys` | List keys (masked) |
 | `POST` | `/api/vault/keys` | Set a key |
+| `GET` | `/api/crews` | List deployable crews |
+| `POST` | `/api/crews/{key}/run` | Deploy & run a crew, returns the run result |
+| `GET` | `/api/blackboard` | Recent Blackboard entries |
+| `POST` | `/api/blackboard/{task_id}/approve` | HITL: approve an `AWAITING_APPROVAL` entry |
 
 Example:
 
@@ -75,16 +108,23 @@ control-plane/
     vault.py         # in-memory secret vault (masked, env-seedable)
     providers.py     # LLM provider abstraction + StubProvider
     constitution.py  # Brand Constitution loader + enforcement
-    runner.py        # executes a blueprint, logs activity
+    runner.py        # executes a blueprint or a crew, logs activity
+    crews/           # Data Plane: Blackboard, EventBus, Agent/Task/Crew, registry
+      blackboard.py
+      base.py
+      market_intelligence.py
     templates/       # dashboard HTML
   brand_constitution.yaml
+  reference/         # original standalone reference (blueprint_builder_v1.py)
   tests/
   requirements.txt
 ```
 
-## Not in this MVP
+## Not yet implemented
 
-Per the roadmap, later phases add the real Data Plane runtime, event bus +
-Blackboard, managed datastores, RBAC, and real agent crews. This MVP is
-deliberately a single-node, file-backed stand-in to satisfy the Phase 1 success
-criteria.
+Per the roadmap, later phases still add: real LLM/tool-backed agents (the crew
+runtime currently uses the deterministic stub provider), a distributed event-bus
+transport (SQS/PubSub/Kafka) in place of the in-process bus, managed datastores
+in place of the JSON files, RBAC, and the remaining crews (Content Factory,
+Marketing & Distribution, Automated Service Delivery). This remains a
+single-node, file-backed stand-in.

@@ -83,3 +83,86 @@ class VaultKeyInfo(BaseModel):
     name: str
     is_set: bool
     preview: str
+
+
+# --------------------------------------------------------------------------- #
+# Data Plane: Blackboard + crews
+# --------------------------------------------------------------------------- #
+class CrewName(str, Enum):
+    """Crews defined in docs/03-agent-crews.md (matches the Blackboard schema)."""
+
+    MARKET_INTELLIGENCE = "market_intelligence"
+    CONTENT_FACTORY = "content_factory"
+    MARKETING_DISTRIBUTION = "marketing_distribution"
+    AUTOMATED_SERVICE_DELIVERY = "automated_service_delivery"
+
+
+class BlackboardStatus(str, Enum):
+    """Lifecycle of a Blackboard artifact (matches the Blackboard schema).
+
+    AWAITING_APPROVAL is the formal Human-in-the-Loop gate: downstream crews
+    must not consume an entry until it reaches APPROVED (or COMPLETE).
+    """
+
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETE = "COMPLETE"
+    AWAITING_APPROVAL = "AWAITING_APPROVAL"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    FAILED = "FAILED"
+
+
+class BlackboardReference(BaseModel):
+    """Pointer to a large binary asset stored outside the Blackboard."""
+
+    kind: str
+    uri: str
+    content_type: str | None = None
+
+
+class BlackboardEntry(BaseModel):
+    """A single entry on the shared Blackboard.
+
+    Conforms to docs/schemas/blackboard.schema.json (v1). Use
+    `to_schema_dict()` to obtain a dict that validates against that schema.
+    """
+
+    schema_version: str = "1.0.0"
+    task_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    parent_task_id: str | None = None
+    crew: CrewName
+    producer_agent: str
+    artifact_type: str
+    status: BlackboardStatus
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
+    references: list[BlackboardReference] = Field(default_factory=list)
+    payload: dict = Field(default_factory=dict)
+    metadata: dict | None = None
+
+    def to_schema_dict(self) -> dict:
+        """JSON-ready dict that validates against blackboard.schema.json."""
+        import json
+
+        return json.loads(self.model_dump_json(exclude_none=True))
+
+
+class CrewRunResult(BaseModel):
+    """Result of running a crew end to end."""
+
+    crew: CrewName
+    directive: str
+    report: str
+    final_task_id: str
+    entries: list[BlackboardEntry]
+    activity_id: str
+    governance_flags: list[str] = Field(default_factory=list)
+
+
+class CrewInfo(BaseModel):
+    """Catalog entry for a deployable crew."""
+
+    key: CrewName
+    display_name: str
+    description: str
+
