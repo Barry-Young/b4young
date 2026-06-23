@@ -1,0 +1,27 @@
+# Golden dataset for the evaluation framework (docs/06-roadmap.md, 6.3).
+#
+# Each case runs a crew end-to-end (auto-approving HITL checkpoints) and the
+# LLM-as-judge scores the synthesized report against the expectations below.
+# `expect_terms` should appear in the output; `forbid_terms` must not.
+cases:
+  - id: mi-001
+    name: Market Intelligence produces a brief
+    crew: market_intelligence
+    directive: Identify the top pain points for early-stage entrepreneurs in Q4.
+    expect_terms:
+      - "Market Intelligence Brief"
+      - "Trend Spotter"
+      - "Audience Profiler"
+    forbid_terms:
+      - "game-changer"
+
+  - id: cf-001
+    name: Content Factory produces a package
+    crew: content_factory
+    directive: "Topic: Overcoming Imposter Syndrome; Format: 7-minute video."
+    expect_terms:
+      - "Content Factory Brief"
+      - "Scriptwriter"
+      - "Video Producer"
+    forbid_terms:
+      - "robust solution"

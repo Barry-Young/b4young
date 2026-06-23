@@ -147,16 +147,37 @@ class BlackboardEntry(BaseModel):
         return json.loads(self.model_dump_json(exclude_none=True))
 
 
-class CrewRunResult(BaseModel):
-    """Result of running a crew end to end."""
+class CrewRunStatus(str, Enum):
+    """Lifecycle of a crew run (which may pause at HITL checkpoints)."""
 
+    RUNNING = "RUNNING"
+    AWAITING_APPROVAL = "AWAITING_APPROVAL"
+    COMPLETE = "COMPLETE"
+    FAILED = "FAILED"
+
+
+class CrewRun(BaseModel):
+    """State of a single crew execution.
+
+    Crew runs are resumable: when a checkpoint task produces its artifact the
+    run pauses in AWAITING_APPROVAL until the artifact is approved, then resumes
+    from `next_index`. This is the programmatic Human-in-the-Loop gate
+    (docs/05-governance-security.md, 5.3).
+    """
+
+    id: str = Field(default_factory=_new_id)
     crew: CrewName
-    directive: str
-    report: str
-    final_task_id: str
-    entries: list[BlackboardEntry]
-    activity_id: str
+    directive: str = ""
+    status: CrewRunStatus = CrewRunStatus.RUNNING
+    next_index: int = 0
+    entry_ids: list[str] = Field(default_factory=list)
+    pending_task_id: str | None = None
+    report: str | None = None
+    activity_id: str | None = None
+    error: str | None = None
     governance_flags: list[str] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=_now)
+    updated_at: datetime = Field(default_factory=_now)
 
 
 class CrewInfo(BaseModel):
@@ -165,4 +186,40 @@ class CrewInfo(BaseModel):
     key: CrewName
     display_name: str
     description: str
+
+
+# --------------------------------------------------------------------------- #
+# Evaluation framework (golden dataset + LLM-as-judge)
+# --------------------------------------------------------------------------- #
+class EvalCase(BaseModel):
+    """A golden test case: a directive and expectations about the output."""
+
+    id: str
+    name: str
+    crew: CrewName
+    directive: str
+    expect_terms: list[str] = Field(default_factory=list)
+    forbid_terms: list[str] = Field(default_factory=list)
+
+
+class EvalResult(BaseModel):
+    """The judged outcome of running a single golden case."""
+
+    case_id: str
+    name: str
+    crew: CrewName
+    score: float
+    passed: bool
+    rationale: str
+    governance_flags: list[str] = Field(default_factory=list)
+
+
+class EvalReport(BaseModel):
+    """Aggregate evaluation results."""
+
+    results: list[EvalResult] = Field(default_factory=list)
+    total: int = 0
+    passed: int = 0
+    average_score: float = 0.0
+
 

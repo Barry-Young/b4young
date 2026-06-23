@@ -21,23 +21,33 @@ The agent runner uses a deterministic **stub** provider, so the system runs with
 no external dependencies. A real LLM provider can be added in
 [`app/providers.py`](./app/providers.py) (pull credentials from the vault).
 
-## Data Plane: crews + Blackboard (Phase 2 start)
+## Data Plane: crews + Blackboard (Phase 2–3)
 
-The Control Plane can now deploy and run **agent crews**
+The Control Plane can deploy and run **agent crews**
 ([docs/02](../docs/02-multi-agent-ecosystem.md), [docs/03](../docs/03-agent-crews.md)):
 
-- **Crews & Orchestrator-Worker:** the **Market Intelligence** crew (Chief
-  Strategist + Trend Spotter + Competitor Analyst + Audience Profiler) runs its
-  workers, then the orchestrator synthesizes a brief.
+- **Crews & Orchestrator-Worker:**
+  - **Market Intelligence** — Chief Strategist + Trend Spotter + Competitor
+    Analyst + Audience Profiler.
+  - **Content Factory** — Executive Producer + Content Strategist + Scriptwriter
+    + Voice Artist + Video Producer.
 - **Shared Blackboard:** every artifact is written as an entry that conforms to
   the versioned [`docs/schemas/blackboard.schema.json`](../docs/schemas/blackboard.schema.json)
   (a test validates conformance against that file) and is persisted for
   inspection and cross-crew consumption.
 - **Event bus:** agents publish completion events over a synchronous pub/sub bus
   (swap-in transport later).
-- **Human-in-the-Loop gate:** the orchestrator's final brief is parked in
-  `AWAITING_APPROVAL`; approve it via `POST /api/blackboard/{task_id}/approve`
-  (or the dashboard) to advance it to `APPROVED`.
+- **Resumable Human-in-the-Loop gate:** crew runs **pause** at checkpoints and
+  resume on approval. Market Intelligence pauses at its final brief; Content
+  Factory pauses **after the script** and again **before the final package**.
+  Approve via `POST /api/blackboard/{task_id}/approve` (or the dashboard); the
+  run advances to the next checkpoint or completes. Run state lives in
+  `CrewRun` records (`GET /api/crew-runs`).
+- **Evaluation framework:** a golden dataset
+  ([`evaluation/golden_dataset.yaml`](./evaluation/golden_dataset.yaml)) is run
+  end-to-end (auto-approving checkpoints) and scored by an LLM-as-judge stub for
+  brand alignment — `POST /api/evaluation/run`. Eval runs use an ephemeral store
+  and never touch live state.
 
 The crew runtime is adapted from the standalone reference at
 [`reference/blueprint_builder_v1.py`](./reference/blueprint_builder_v1.py),
@@ -74,9 +84,13 @@ immediately to confirm the Control Plane can deploy, run, and monitor an agent
 | `GET` | `/api/vault/keys` | List keys (masked) |
 | `POST` | `/api/vault/keys` | Set a key |
 | `GET` | `/api/crews` | List deployable crews |
-| `POST` | `/api/crews/{key}/run` | Deploy & run a crew, returns the run result |
+| `POST` | `/api/crews/{key}/run` | Deploy & run a crew until done or first checkpoint |
+| `GET` | `/api/crew-runs` | List crew runs (with status) |
+| `GET` | `/api/crew-runs/{id}` | Get a crew run |
 | `GET` | `/api/blackboard` | Recent Blackboard entries |
-| `POST` | `/api/blackboard/{task_id}/approve` | HITL: approve an `AWAITING_APPROVAL` entry |
+| `POST` | `/api/blackboard/{task_id}/approve` | HITL: approve an entry and resume its run |
+| `GET` | `/api/evaluation/cases` | List golden evaluation cases |
+| `POST` | `/api/evaluation/run` | Run the evaluation (optional `?crew=`) |
 
 Example:
 
@@ -108,13 +122,18 @@ control-plane/
     vault.py         # in-memory secret vault (masked, env-seedable)
     providers.py     # LLM provider abstraction + StubProvider
     constitution.py  # Brand Constitution loader + enforcement
-    runner.py        # executes a blueprint or a crew, logs activity
-    crews/           # Data Plane: Blackboard, EventBus, Agent/Task/Crew, registry
-      blackboard.py
-      base.py
+    runner.py        # executes a blueprint or starts/resumes a crew run
+    evaluation.py    # golden dataset runner + LLM-as-judge stub
+    crews/           # Data Plane
+      blackboard.py        # schema-aware Blackboard + EventBus
+      base.py              # Agent / Task / Crew primitives
+      engine.py            # resumable run engine + HITL checkpoints
       market_intelligence.py
+      content_factory.py
+      __init__.py          # crew registry
     templates/       # dashboard HTML
   brand_constitution.yaml
+  evaluation/        # golden_dataset.yaml
   reference/         # original standalone reference (blueprint_builder_v1.py)
   tests/
   requirements.txt
@@ -123,8 +142,8 @@ control-plane/
 ## Not yet implemented
 
 Per the roadmap, later phases still add: real LLM/tool-backed agents (the crew
-runtime currently uses the deterministic stub provider), a distributed event-bus
-transport (SQS/PubSub/Kafka) in place of the in-process bus, managed datastores
-in place of the JSON files, RBAC, and the remaining crews (Content Factory,
-Marketing & Distribution, Automated Service Delivery). This remains a
-single-node, file-backed stand-in.
+runtime uses the deterministic stub provider, and the LLM-as-judge is a heuristic
+stub), a distributed event-bus transport (SQS/PubSub/Kafka) in place of the
+in-process bus, managed datastores in place of the JSON files, RBAC, and the
+remaining crews (Marketing & Distribution, Automated Service Delivery). This
+remains a single-node, file-backed stand-in.

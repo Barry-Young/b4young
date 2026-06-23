@@ -74,4 +74,6 @@ def build(
         event_bus=EventBus(),
         vault=vault,
         constitution=constitution,
+        final_artifact_type="intelligence_brief",
+        final_checkpoint=True,
     )
