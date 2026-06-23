@@ -10,7 +10,7 @@ from __future__ import annotations
 from ..constitution import BrandConstitution
 from ..models import CrewInfo, CrewName
 from ..vault import Vault
-from . import market_intelligence
+from . import content_factory, market_intelligence
 from .base import Crew
 from .blackboard import Blackboard
 
@@ -20,6 +20,11 @@ _REGISTRY = {
         market_intelligence.DISPLAY_NAME,
         market_intelligence.DESCRIPTION,
         market_intelligence.build,
+    ),
+    CrewName.CONTENT_FACTORY: (
+        content_factory.DISPLAY_NAME,
+        content_factory.DESCRIPTION,
+        content_factory.build,
     ),
 }
 

@@ -19,6 +19,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import __version__
 from . import crews as crew_registry
+from . import evaluation
 from .constitution import BrandConstitution
 from .models import (
     ActivityLogEntry,
@@ -28,12 +29,14 @@ from .models import (
     BlackboardStatus,
     CrewInfo,
     CrewName,
-    CrewRunResult,
+    CrewRun,
+    EvalCase,
+    EvalReport,
     RunRequest,
     VaultKeyCreate,
     VaultKeyInfo,
 )
-from .runner import run_blueprint, run_crew
+from .runner import resume_crew_for_entry, run_blueprint, start_crew
 from .store import build_stores
 from .vault import Vault
 
@@ -41,10 +44,11 @@ TEMPLATES = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "tem
 
 app = FastAPI(title="Blueprint Builder — Control Plane", version=__version__)
 
-blueprints, activity, blackboard_store = build_stores()
+blueprints, activity, blackboard_store, crew_runs = build_stores()
 vault = Vault()
 vault.seed_from_env()
 constitution = BrandConstitution.load()
+last_eval_report: EvalReport | None = None
 
 
 def _seed_default_blueprint() -> None:
@@ -131,18 +135,32 @@ def list_crews() -> list[CrewInfo]:
     return crew_registry.list_crews()
 
 
-@app.post("/api/crews/{crew_key}/run", response_model=CrewRunResult)
-def run_crew_endpoint(crew_key: CrewName, payload: RunRequest) -> CrewRunResult:
+@app.post("/api/crews/{crew_key}/run", response_model=CrewRun)
+def run_crew_endpoint(crew_key: CrewName, payload: RunRequest) -> CrewRun:
     if not crew_registry.is_registered(crew_key):
         raise HTTPException(status_code=404, detail="crew not found")
-    return run_crew(
+    return start_crew(
         crew_key,
         payload.input,
         vault=vault,
         constitution=constitution,
         activity=activity,
         blackboard_store=blackboard_store,
+        crew_runs=crew_runs,
     )
+
+
+@app.get("/api/crew-runs", response_model=list[CrewRun])
+def list_crew_runs(limit: int = 50) -> list[CrewRun]:
+    return crew_runs.list(limit=limit)
+
+
+@app.get("/api/crew-runs/{run_id}", response_model=CrewRun)
+def get_crew_run(run_id: str) -> CrewRun:
+    run = crew_runs.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="crew run not found")
+    return run
 
 
 @app.get("/api/blackboard", response_model=list[BlackboardEntry])
@@ -150,9 +168,7 @@ def list_blackboard(limit: int = 50) -> list[BlackboardEntry]:
     return blackboard_store.list(limit=limit)
 
 
-@app.post("/api/blackboard/{task_id}/approve", response_model=BlackboardEntry)
-def approve_blackboard_entry(task_id: str) -> BlackboardEntry:
-    """Human-in-the-Loop gate: approve an entry parked in AWAITING_APPROVAL."""
+def _approve_entry(task_id: str) -> BlackboardEntry:
     entry = blackboard_store.get(task_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="blackboard entry not found")
@@ -160,7 +176,43 @@ def approve_blackboard_entry(task_id: str) -> BlackboardEntry:
         raise HTTPException(status_code=409, detail=f"entry is {entry.status.value}, not AWAITING_APPROVAL")
     entry.status = BlackboardStatus.APPROVED
     entry.updated_at = datetime.now(timezone.utc)
-    return blackboard_store.update(entry)
+    blackboard_store.update(entry)
+    # Resume any crew run waiting on this checkpoint (advances to the next
+    # checkpoint or completes the run).
+    resume_crew_for_entry(
+        task_id,
+        vault=vault,
+        constitution=constitution,
+        activity=activity,
+        blackboard_store=blackboard_store,
+        crew_runs=crew_runs,
+    )
+    return entry
+
+
+@app.post("/api/blackboard/{task_id}/approve", response_model=BlackboardEntry)
+def approve_blackboard_entry(task_id: str) -> BlackboardEntry:
+    """HITL gate: approve an AWAITING_APPROVAL entry and resume its crew run."""
+    return _approve_entry(task_id)
+
+
+# --------------------------------------------------------------------------- #
+# Evaluation framework
+# --------------------------------------------------------------------------- #
+@app.get("/api/evaluation/cases", response_model=list[EvalCase])
+def list_eval_cases() -> list[EvalCase]:
+    return evaluation.load_cases()
+
+
+@app.post("/api/evaluation/run", response_model=EvalReport)
+def run_evaluation_endpoint(crew: CrewName | None = None) -> EvalReport:
+    global last_eval_report
+    last_eval_report = evaluation.run_evaluation(
+        vault=vault,
+        constitution=constitution,
+        crew_filter=crew.value if crew else None,
+    )
+    return last_eval_report
 
 
 # --------------------------------------------------------------------------- #
@@ -178,7 +230,10 @@ def dashboard(request: Request) -> HTMLResponse:
             "activity": activity.list(limit=25),
             "keys": vault.list_keys(),
             "crews": crew_registry.list_crews(),
+            "crew_runs": crew_runs.list(limit=15),
             "blackboard": blackboard_store.list(limit=25),
+            "eval_cases": evaluation.load_cases(),
+            "eval_report": last_eval_report,
         },
     )
 
@@ -216,13 +271,14 @@ def ui_set_key(name: str = Form(...), value: str = Form(...)) -> RedirectRespons
 @app.post("/ui/crews/{crew_key}/run")
 def ui_run_crew(crew_key: CrewName, directive: str = Form("")) -> RedirectResponse:
     if crew_registry.is_registered(crew_key):
-        run_crew(
+        start_crew(
             crew_key,
             directive,
             vault=vault,
             constitution=constitution,
             activity=activity,
             blackboard_store=blackboard_store,
+            crew_runs=crew_runs,
         )
     return RedirectResponse(url="/", status_code=303)
 
@@ -231,7 +287,12 @@ def ui_run_crew(crew_key: CrewName, directive: str = Form("")) -> RedirectRespon
 def ui_approve_entry(task_id: str) -> RedirectResponse:
     entry = blackboard_store.get(task_id)
     if entry is not None and entry.status == BlackboardStatus.AWAITING_APPROVAL:
-        entry.status = BlackboardStatus.APPROVED
-        entry.updated_at = datetime.now(timezone.utc)
-        blackboard_store.update(entry)
+        _approve_entry(task_id)
+    return RedirectResponse(url="/", status_code=303)
+
+
+@app.post("/ui/evaluation/run")
+def ui_run_evaluation() -> RedirectResponse:
+    global last_eval_report
+    last_eval_report = evaluation.run_evaluation(vault=vault, constitution=constitution)
     return RedirectResponse(url="/", status_code=303)

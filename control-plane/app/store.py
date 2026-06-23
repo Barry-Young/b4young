@@ -14,7 +14,7 @@ import json
 import threading
 from pathlib import Path
 
-from .models import ActivityLogEntry, AgentBlueprint, BlackboardEntry
+from .models import ActivityLogEntry, AgentBlueprint, BlackboardEntry, CrewRun
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
@@ -111,11 +111,52 @@ class BlackboardStore(_JsonRepository):
         return [BlackboardEntry(**row) for row in rows[:limit]]
 
 
+class CrewRunStore(_JsonRepository):
+    """Persistent store of crew runs (resumable across HITL checkpoints)."""
+
+    def add(self, run: CrewRun) -> CrewRun:
+        with self._lock:
+            rows = self._read()
+            rows.append(json.loads(run.model_dump_json()))
+            self._write(rows)
+        return run
+
+    def get(self, run_id: str) -> CrewRun | None:
+        for row in self._read():
+            if row["id"] == run_id:
+                return CrewRun(**row)
+        return None
+
+    def update(self, run: CrewRun) -> CrewRun:
+        with self._lock:
+            rows = self._read()
+            for i, row in enumerate(rows):
+                if row["id"] == run.id:
+                    rows[i] = json.loads(run.model_dump_json())
+                    break
+            self._write(rows)
+        return run
+
+    def find_by_pending(self, task_id: str) -> CrewRun | None:
+        for row in self._read():
+            if row.get("pending_task_id") == task_id:
+                return CrewRun(**row)
+        return None
+
+    def list(self, limit: int = 50) -> list[CrewRun]:
+        rows = self._read()
+        rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+        return [CrewRun(**row) for row in rows[:limit]]
+
+
 def build_stores(
-    data_dir: Path = DATA_DIR,
-) -> tuple[BlueprintStore, ActivityStore, BlackboardStore]:
+    data_dir: Path | None = None,
+) -> tuple[BlueprintStore, ActivityStore, BlackboardStore, CrewRunStore]:
+    # Resolve DATA_DIR at call time so tests can monkeypatch it.
+    data_dir = data_dir if data_dir is not None else DATA_DIR
     return (
         BlueprintStore(data_dir / "blueprints.json"),
         ActivityStore(data_dir / "activity.json"),
         BlackboardStore(data_dir / "blackboard.json"),
+        CrewRunStore(data_dir / "crew_runs.json"),
     )
