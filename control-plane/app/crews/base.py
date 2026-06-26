@@ -12,11 +12,11 @@ engine.py; this module holds the primitives.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..constitution import BrandConstitution
 from ..models import BlackboardEntry, BlackboardStatus, CrewName
-from ..providers import get_provider
+from ..providers import DEFAULT_AGENT_MODEL, get_provider
 from ..vault import Vault
 from .blackboard import Blackboard, EventBus
 
@@ -29,7 +29,7 @@ class Agent:
     goal: str
     backstory: str
     artifact_type: str
-    model: str = "stub"
+    model: str = field(default_factory=lambda: DEFAULT_AGENT_MODEL)
 
     def perform_task(
         self,

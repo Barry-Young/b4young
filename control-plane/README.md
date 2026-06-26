@@ -17,9 +17,24 @@ Implements the [Phase 1 roadmap milestones](../docs/06-roadmap.md#61-phase-1-fou
 - **Activity dashboard:** run a "hello world" agent and monitor every run, its
   output, duration, and governance flags.
 
-The agent runner uses a deterministic **stub** provider, so the system runs with
-no external dependencies. A real LLM provider can be added in
-[`app/providers.py`](./app/providers.py) (pull credentials from the vault).
+By default the agent runner uses a deterministic **stub** provider, so the
+system runs with no external dependencies or API keys.
+
+### Using a real LLM (Claude)
+
+[`app/providers.py`](./app/providers.py) ships an `AnthropicProvider`. To make
+crews produce real output:
+
+```bash
+export BYI_KEY_ANTHROPIC=sk-ant-...      # key, seeded into the vault at startup
+export BYI_AGENT_MODEL=claude-sonnet-4-6 # default model for crew agents
+```
+
+Resolution is graceful: a Claude model with no key in the vault falls back to the
+stub, so a missing key never breaks a run. Individual blueprints can also set
+`model` directly (e.g. `claude-opus-4-8`). The evaluation **LLM-as-judge** uses a
+real model automatically when the `ANTHROPIC` key is present, and the heuristic
+judge otherwise.
 
 ## Data Plane: crews + Blackboard (Phase 2–3)
 
@@ -124,7 +139,7 @@ control-plane/
     models.py        # Pydantic models (blueprints, activity, vault)
     store.py         # JSON-file persistence for blueprints & activity
     vault.py         # in-memory secret vault (masked, env-seedable)
-    providers.py     # LLM provider abstraction + StubProvider
+    providers.py     # LLM provider abstraction: StubProvider + AnthropicProvider
     constitution.py  # Brand Constitution loader + enforcement
     runner.py        # executes a blueprint or starts/resumes a crew run
     evaluation.py    # golden dataset runner + LLM-as-judge stub
@@ -147,9 +162,9 @@ control-plane/
 
 ## Not yet implemented
 
-All four crews from the architecture are implemented. Later phases still add:
-real LLM/tool-backed agents (the crew runtime uses the deterministic stub
-provider, and the LLM-as-judge is a heuristic stub), a distributed event-bus
-transport (SQS/PubSub/Kafka) in place of the in-process bus, managed datastores
-in place of the JSON files, and RBAC. This remains a single-node, file-backed
-stand-in.
+All four crews from the architecture are implemented, and a real Claude provider
++ LLM-as-judge are wired in (with stub fallback). Later phases still add:
+tool-backed agents (web search, social/affiliate/TTS/video APIs), a distributed
+event-bus transport (SQS/PubSub/Kafka) in place of the in-process bus, managed
+datastores in place of the JSON files, and RBAC. This remains a single-node,
+file-backed stand-in.
