@@ -172,6 +172,9 @@ class CrewRun(BaseModel):
     next_index: int = 0
     entry_ids: list[str] = Field(default_factory=list)
     pending_task_id: str | None = None
+    # Upstream Blackboard artifact that triggered this run, if it was chained
+    # from another crew (e.g. an approved Market Intelligence brief).
+    source_task_id: str | None = None
     report: str | None = None
     activity_id: str | None = None
     error: str | None = None

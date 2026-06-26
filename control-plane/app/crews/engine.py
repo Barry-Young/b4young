@@ -35,8 +35,14 @@ def start_run(
     activity: ActivityStore,
     crew_runs: CrewRunStore,
     auto_approve: bool = False,
+    source_task_id: str | None = None,
 ) -> CrewRun:
-    run = CrewRun(crew=crew.name, directive=directive, status=CrewRunStatus.RUNNING)
+    run = CrewRun(
+        crew=crew.name,
+        directive=directive,
+        status=CrewRunStatus.RUNNING,
+        source_task_id=source_task_id,
+    )
     crew_runs.add(run)
     return _advance(run, crew, activity=activity, crew_runs=crew_runs, auto_approve=auto_approve)
 
@@ -81,6 +87,7 @@ def _advance(
                     status=BlackboardStatus.AWAITING_APPROVAL
                     if is_checkpoint
                     else BlackboardStatus.COMPLETE,
+                    parent_task_id=run.source_task_id,
                 )
                 run.entry_ids.append(entry.task_id)
                 run.next_index = i + 1
@@ -129,6 +136,7 @@ def _synthesize(run: CrewRun, crew: Crew, *, auto_approve: bool):
         artifact_type=crew.final_artifact_type,
         payload={"directive": run.directive, "report": report},
         status=status,
+        parent_task_id=run.source_task_id,
         metadata={"model": crew.orchestrator.model, "worker_tasks": len(crew.tasks)},
     )
 

@@ -17,8 +17,10 @@ from .crews.blackboard import Blackboard
 from .models import (
     ActivityLogEntry,
     AgentBlueprint,
+    BlackboardEntry,
     CrewName,
     CrewRun,
+    CrewRunStatus,
     RunStatus,
 )
 from .providers import get_provider
@@ -64,6 +66,14 @@ def _utcnow(entry: ActivityLogEntry):
     return datetime.now(timezone.utc)
 
 
+# Crew pipeline: when a crew's final artifact is APPROVED, the downstream crew
+# is automatically deployed with that artifact as its directive (consuming the
+# approved Blackboard entry — docs/02-multi-agent-ecosystem.md, cross-crew flow).
+PIPELINE: dict[CrewName, CrewName] = {
+    CrewName.MARKET_INTELLIGENCE: CrewName.CONTENT_FACTORY,
+}
+
+
 def start_crew(
     crew_key: CrewName,
     directive: str,
@@ -73,13 +83,46 @@ def start_crew(
     activity: ActivityStore,
     blackboard_store: BlackboardStore,
     crew_runs: CrewRunStore,
+    source_task_id: str | None = None,
 ) -> CrewRun:
     """Deploy a crew and run it until completion or the first HITL checkpoint."""
     blackboard = Blackboard(blackboard_store)
     crew = crew_registry.build_crew(
         crew_key, blackboard=blackboard, vault=vault, constitution=constitution
     )
-    return engine.start_run(crew, directive, activity=activity, crew_runs=crew_runs)
+    return engine.start_run(
+        crew, directive, activity=activity, crew_runs=crew_runs, source_task_id=source_task_id
+    )
+
+
+def maybe_chain_downstream(
+    approved_entry: BlackboardEntry,
+    completed_run: CrewRun | None,
+    *,
+    vault: Vault,
+    constitution: BrandConstitution,
+    activity: ActivityStore,
+    blackboard_store: BlackboardStore,
+    crew_runs: CrewRunStore,
+) -> CrewRun | None:
+    """If approving an entry completed a crew run that has a downstream crew in
+    the pipeline, deploy that downstream crew with the approved brief."""
+    if completed_run is None or completed_run.status != CrewRunStatus.COMPLETE:
+        return None
+    downstream = PIPELINE.get(completed_run.crew)
+    if downstream is None:
+        return None
+    directive = approved_entry.payload.get("report") or approved_entry.payload.get("output") or ""
+    return start_crew(
+        downstream,
+        directive,
+        vault=vault,
+        constitution=constitution,
+        activity=activity,
+        blackboard_store=blackboard_store,
+        crew_runs=crew_runs,
+        source_task_id=approved_entry.task_id,
+    )
 
 
 def resume_crew_for_entry(

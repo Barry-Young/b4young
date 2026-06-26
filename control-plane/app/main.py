@@ -36,7 +36,13 @@ from .models import (
     VaultKeyCreate,
     VaultKeyInfo,
 )
-from .runner import resume_crew_for_entry, run_blueprint, start_crew
+from .runner import (
+    PIPELINE,
+    maybe_chain_downstream,
+    resume_crew_for_entry,
+    run_blueprint,
+    start_crew,
+)
 from .store import build_stores
 from .vault import Vault
 
@@ -135,6 +141,12 @@ def list_crews() -> list[CrewInfo]:
     return crew_registry.list_crews()
 
 
+@app.get("/api/pipeline")
+def get_pipeline() -> dict[str, str]:
+    """The crew chain: approving an upstream crew's brief deploys the downstream."""
+    return {src.value: dst.value for src, dst in PIPELINE.items()}
+
+
 @app.post("/api/crews/{crew_key}/run", response_model=CrewRun)
 def run_crew_endpoint(crew_key: CrewName, payload: RunRequest) -> CrewRun:
     if not crew_registry.is_registered(crew_key):
@@ -179,8 +191,19 @@ def _approve_entry(task_id: str) -> BlackboardEntry:
     blackboard_store.update(entry)
     # Resume any crew run waiting on this checkpoint (advances to the next
     # checkpoint or completes the run).
-    resume_crew_for_entry(
+    resumed = resume_crew_for_entry(
         task_id,
+        vault=vault,
+        constitution=constitution,
+        activity=activity,
+        blackboard_store=blackboard_store,
+        crew_runs=crew_runs,
+    )
+    # If that completed a crew run with a downstream crew, deploy it with the
+    # approved brief (end-to-end pipeline).
+    maybe_chain_downstream(
+        entry,
+        resumed,
         vault=vault,
         constitution=constitution,
         activity=activity,
