@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+# Ensure `app` is importable regardless of how pytest is invoked.
+pythonpath = ["."]
+testpaths = ["tests"]

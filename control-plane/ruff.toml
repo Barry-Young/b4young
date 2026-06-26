@@ -1,0 +1,7 @@
+# Ruff config for the Control Plane.
+# Lint targets first-party code; the preserved standalone reference is excluded.
+extend-exclude = ["reference"]
+
+[lint]
+# Pyflakes (F) catches real errors: unused imports, undefined names, etc.
+select = ["F"]
