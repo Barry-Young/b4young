@@ -12,7 +12,7 @@ engine.py; this module holds the primitives.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from ..constitution import BrandConstitution
 from ..models import BlackboardEntry, BlackboardStatus, CrewName
