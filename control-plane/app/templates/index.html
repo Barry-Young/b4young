@@ -132,7 +132,7 @@
             <td class="meta">{{ r.created_at }}</td>
             <td>{{ r.crew.value }}</td>
             <td class="status-{{ 'COMPLETE' if r.status.value == 'COMPLETE' else ('FAILED' if r.status.value == 'FAILED' else 'RUNNING') }}">{{ r.status.value }}</td>
-            <td class="meta">{{ r.entry_ids|length }} artifact(s){% if r.pending_task_id %} · awaiting approval{% endif %}</td>
+            <td class="meta">{{ r.entry_ids|length }} artifact(s){% if r.pending_task_id %} · awaiting approval{% endif %}{% if r.source_task_id %} · ⛓ chained{% endif %}</td>
           </tr>
         {% else %}
           <tr><td colspan="4" class="meta">No crew runs yet.</td></tr>

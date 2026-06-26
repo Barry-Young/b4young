@@ -62,6 +62,11 @@ The Control Plane can deploy and run **agent crews**
   Approve via `POST /api/blackboard/{task_id}/approve` (or the dashboard); the
   run advances to the next checkpoint or completes. Run state lives in
   `CrewRun` records (`GET /api/crew-runs`).
+- **Cross-crew pipeline:** approving a crew's final brief automatically deploys
+  the downstream crew with that brief as its directive (`GET /api/pipeline`).
+  Out of the box, an approved **Market Intelligence** brief auto-launches the
+  **Content Factory**; chained runs/artifacts carry `source_task_id` /
+  `parent_task_id` back to the originating brief.
 - **Evaluation framework:** a golden dataset
   ([`evaluation/golden_dataset.yaml`](./evaluation/golden_dataset.yaml)) is run
   end-to-end (auto-approving checkpoints) and scored by an LLM-as-judge stub for

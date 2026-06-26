@@ -42,6 +42,7 @@ class Agent:
         vault: Vault,
         constitution: BrandConstitution,
         status: BlackboardStatus = BlackboardStatus.COMPLETE,
+        parent_task_id: str | None = None,
     ) -> BlackboardEntry:
         provider = get_provider(self.model, vault)
         system = constitution.system_prompt(self.role, self.goal, self.backstory)
@@ -55,6 +56,7 @@ class Agent:
             artifact_type=self.artifact_type,
             payload={"task": description, "directive": directive, "output": output},
             status=status,
+            parent_task_id=parent_task_id,
             metadata={"model": self.model, "governance_flags": flags},
         )
         event_bus.publish(f"{self.role}.complete", {"task_id": entry.task_id})
