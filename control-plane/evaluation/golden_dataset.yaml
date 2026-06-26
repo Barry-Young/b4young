@@ -25,3 +25,25 @@ cases:
       - "Video Producer"
     forbid_terms:
       - "robust solution"
+
+  - id: md-001
+    name: Marketing & Distribution plans a launch
+    crew: marketing_distribution
+    directive: Launch the imposter-syndrome video across channels with affiliate links.
+    expect_terms:
+      - "Marketing & Distribution Brief"
+      - "Social Media Manager"
+      - "Affiliate Program Manager"
+    forbid_terms:
+      - "synergy"
+
+  - id: asd-001
+    name: Automated Service Delivery plans services
+    crew: automated_service_delivery
+    directive: Stand up an evergreen webinar funnel and a coaching flow.
+    expect_terms:
+      - "Automated Service Delivery Brief"
+      - "Webinar Host"
+      - "Personalized Coaching Bot"
+    forbid_terms:
+      - "game-changer"

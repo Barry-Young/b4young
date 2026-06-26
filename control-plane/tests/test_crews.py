@@ -86,5 +86,6 @@ def test_approve_unknown_entry_404(client):
     assert client.post("/api/blackboard/nope/approve").status_code == 404
 
 
-def test_unknown_crew_404(client):
-    assert client.post("/api/crews/marketing_distribution/run", json={"input": "x"}).status_code == 404
+def test_unknown_crew_rejected(client):
+    # A value outside the CrewName enum is rejected by request validation.
+    assert client.post("/api/crews/not_a_crew/run", json={"input": "x"}).status_code == 422
