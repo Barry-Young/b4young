@@ -1,8 +1,7 @@
 """Data Plane crews and the crew registry.
 
-The registry lets the Control Plane discover and deploy crews by key. Add new
-crews (Content Factory, Marketing & Distribution, Automated Service Delivery) by
-implementing a builder module and registering it here.
+The registry lets the Control Plane discover and deploy crews by key. Add a new
+crew by implementing a builder module and registering it here.
 """
 
 from __future__ import annotations
@@ -10,7 +9,12 @@ from __future__ import annotations
 from ..constitution import BrandConstitution
 from ..models import CrewInfo, CrewName
 from ..vault import Vault
-from . import content_factory, market_intelligence
+from . import (
+    automated_service_delivery,
+    content_factory,
+    market_intelligence,
+    marketing_distribution,
+)
 from .base import Crew
 from .blackboard import Blackboard
 
@@ -25,6 +29,16 @@ _REGISTRY = {
         content_factory.DISPLAY_NAME,
         content_factory.DESCRIPTION,
         content_factory.build,
+    ),
+    CrewName.MARKETING_DISTRIBUTION: (
+        marketing_distribution.DISPLAY_NAME,
+        marketing_distribution.DESCRIPTION,
+        marketing_distribution.build,
+    ),
+    CrewName.AUTOMATED_SERVICE_DELIVERY: (
+        automated_service_delivery.DISPLAY_NAME,
+        automated_service_delivery.DESCRIPTION,
+        automated_service_delivery.build,
     ),
 }
 

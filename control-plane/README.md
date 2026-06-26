@@ -26,11 +26,15 @@ no external dependencies. A real LLM provider can be added in
 The Control Plane can deploy and run **agent crews**
 ([docs/02](../docs/02-multi-agent-ecosystem.md), [docs/03](../docs/03-agent-crews.md)):
 
-- **Crews & Orchestrator-Worker:**
+- **Crews & Orchestrator-Worker** (all four from docs/03):
   - **Market Intelligence** — Chief Strategist + Trend Spotter + Competitor
     Analyst + Audience Profiler.
   - **Content Factory** — Executive Producer + Content Strategist + Scriptwriter
     + Voice Artist + Video Producer.
+  - **Marketing & Distribution** — Campaign Manager + Social Media Manager +
+    Affiliate Program Manager + Engagement Bot.
+  - **Automated Service Delivery** — Product Manager + Webinar Host +
+    Personalized Coaching Bot.
 - **Shared Blackboard:** every artifact is written as an entry that conforms to
   the versioned [`docs/schemas/blackboard.schema.json`](../docs/schemas/blackboard.schema.json)
   (a test validates conformance against that file) and is persisted for
@@ -130,6 +134,8 @@ control-plane/
       engine.py            # resumable run engine + HITL checkpoints
       market_intelligence.py
       content_factory.py
+      marketing_distribution.py
+      automated_service_delivery.py
       __init__.py          # crew registry
     templates/       # dashboard HTML
   brand_constitution.yaml
@@ -141,9 +147,9 @@ control-plane/
 
 ## Not yet implemented
 
-Per the roadmap, later phases still add: real LLM/tool-backed agents (the crew
-runtime uses the deterministic stub provider, and the LLM-as-judge is a heuristic
-stub), a distributed event-bus transport (SQS/PubSub/Kafka) in place of the
-in-process bus, managed datastores in place of the JSON files, RBAC, and the
-remaining crews (Marketing & Distribution, Automated Service Delivery). This
-remains a single-node, file-backed stand-in.
+All four crews from the architecture are implemented. Later phases still add:
+real LLM/tool-backed agents (the crew runtime uses the deterministic stub
+provider, and the LLM-as-judge is a heuristic stub), a distributed event-bus
+transport (SQS/PubSub/Kafka) in place of the in-process bus, managed datastores
+in place of the JSON files, and RBAC. This remains a single-node, file-backed
+stand-in.
