@@ -12,6 +12,7 @@ Blackboard / activity log.
 
 from __future__ import annotations
 
+import re
 import tempfile
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from .constitution import BrandConstitution
 from .crews import engine
 from .crews.blackboard import Blackboard
 from .models import EvalCase, EvalReport, EvalResult
+from .providers import get_provider
 from .store import build_stores
 from .vault import Vault
 
@@ -36,25 +38,44 @@ def load_cases(path: Path = DATASET_PATH) -> list[EvalCase]:
     return [EvalCase(**row) for row in data.get("cases", [])]
 
 
-def judge(report: str, case: EvalCase, constitution: BrandConstitution) -> EvalResult:
-    text = report.lower()
-    expected = case.expect_terms or []
-    hits = [t for t in expected if t.lower() in text]
-    coverage = (len(hits) / len(expected)) if expected else 1.0
+JUDGE_MODEL = "claude-sonnet-4-6"
 
+
+def _llm_score(report: str, case: EvalCase, provider) -> tuple[float, str]:
+    """Ask a real model to score brand alignment / coverage in [0, 1]."""
+    expected = ", ".join(case.expect_terms) or "(none)"
+    prompt = (
+        "You are evaluating an AI agent crew's output for the byoungimprovements brand.\n"
+        f"Directive: {case.directive}\n"
+        f"The output should cover these points: {expected}.\n\n"
+        f"OUTPUT:\n{report}\n\n"
+        "Respond with ONLY a number from 0 to 1 scoring how well the output reflects "
+        "the brand and covers the points (1 = excellent)."
+    )
+    raw = provider.generate(prompt, system="You are a strict evaluation judge. Reply with a single number.")
+    match = re.search(r"[01](?:\.\d+)?", raw)
+    score = min(1.0, max(0.0, float(match.group()))) if match else 0.0
+    return score, f"[llm:{provider.name}] raw='{raw.strip()[:60]}'"
+
+
+def judge(report: str, case: EvalCase, constitution: BrandConstitution, provider=None) -> EvalResult:
+    text = report.lower()
     forbidden_hits = [t for t in case.forbid_terms if t.lower() in text]
     governance_flags = constitution.check_output(report)
 
-    score = coverage
+    if provider is not None and not provider.is_stub:
+        score, rationale = _llm_score(report, case, provider)
+    else:
+        expected = case.expect_terms or []
+        hits = [t for t in expected if t.lower() in text]
+        score = (len(hits) / len(expected)) if expected else 1.0
+        rationale = f"[heuristic] expected-term coverage {len(hits)}/{len(expected)}"
+
     if forbidden_hits or governance_flags:
         score *= 0.5  # penalize policy violations
-    passed = coverage == 1.0 and not forbidden_hits and not governance_flags
+    passed = score >= PASS_THRESHOLD and not forbidden_hits and not governance_flags
 
-    rationale = (
-        f"expected-term coverage {len(hits)}/{len(expected)}; "
-        f"forbidden hits: {forbidden_hits or 'none'}; "
-        f"governance flags: {governance_flags or 'none'}"
-    )
+    rationale += f"; forbidden hits: {forbidden_hits or 'none'}; governance flags: {governance_flags or 'none'}"
     return EvalResult(
         case_id=case.id,
         name=case.name,
@@ -77,6 +98,10 @@ def run_evaluation(
     if crew_filter:
         cases = [c for c in cases if c.crew.value == crew_filter]
 
+    # A real model judges when an ANTHROPIC key is present; otherwise the
+    # heuristic judge is used (so eval is deterministic and offline by default).
+    judge_provider = get_provider(JUDGE_MODEL, vault)
+
     results: list[EvalResult] = []
     with tempfile.TemporaryDirectory() as tmp:
         _bp, activity, blackboard_store, crew_runs = build_stores(Path(tmp))
@@ -88,7 +113,7 @@ def run_evaluation(
             run = engine.start_run(
                 crew, case.directive, activity=activity, crew_runs=crew_runs, auto_approve=True
             )
-            results.append(judge(run.report or "", case, constitution))
+            results.append(judge(run.report or "", case, constitution, judge_provider))
 
     passed = sum(1 for r in results if r.passed)
     average = round(sum(r.score for r in results) / len(results), 3) if results else 0.0
