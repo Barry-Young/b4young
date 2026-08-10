@@ -57,7 +57,15 @@ class Agent:
             payload={"task": description, "directive": directive, "output": output},
             status=status,
             parent_task_id=parent_task_id,
-            metadata={"model": self.model, "governance_flags": flags},
+            # Record the *resolved* provider, not just the requested model: with
+            # `auto` the two differ, and the log has to make it obvious whether
+            # this artifact is a real draft or stub placeholder text.
+            metadata={
+                "model": self.model,
+                "resolved_model": provider.name,
+                "is_stub": provider.is_stub,
+                "governance_flags": flags,
+            },
         )
         event_bus.publish(f"{self.role}.complete", {"task_id": entry.task_id})
         return entry

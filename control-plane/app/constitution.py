@@ -19,6 +19,7 @@ class BrandConstitution:
     def __init__(self, data: dict) -> None:
         self.version: str = data.get("version", "0.0.0")
         self.voice: dict = data.get("voice", {})
+        self.principles: list[str] = data.get("principles", [])
         self.preferred_terms: list[str] = data.get("preferred_terms", [])
         self.banned_terms: list[str] = data.get("banned_terms", [])
         self.guardrails: list[str] = data.get("guardrails", [])
@@ -39,6 +40,10 @@ class BrandConstitution:
             parts.append(f"Backstory: {backstory}")
         if self.voice.get("tone"):
             parts.append(f"Brand voice/tone: {self.voice['tone']}")
+        if self.voice.get("audience"):
+            parts.append(f"Audience: {self.voice['audience']}")
+        for principle in self.principles:
+            parts.append(f"Principle: {principle}")
         if self.preferred_terms:
             parts.append("Preferred terms: " + ", ".join(self.preferred_terms))
         if self.banned_terms:
