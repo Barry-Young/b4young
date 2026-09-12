@@ -32,6 +32,13 @@
     pre { white-space:pre-wrap; margin:.2rem 0 0; color:var(--muted); font-size:.78rem; }
     .inline { display:flex; gap:.4rem; }
     .inline input { flex:1; }
+    .banner { margin:1.5rem 1.5rem -.5rem; padding:.7rem 1rem; border-radius:8px; font-size:.85rem;
+      border:1px solid #334155; }
+    .banner.on { background:#052e1b; border-color:#166534; }
+    .banner.off { background:#3b2606; border-color:#a16207; }
+    .banner b { color:var(--ink); }
+    .banner a { color:var(--accent); }
+    .hint { color:var(--muted); font-size:.75rem; margin:.35rem 0 0; }
   </style>
 </head>
 <body>
@@ -39,6 +46,12 @@
     <h1>🛠️ Blueprint Builder — Control Plane</h1>
     <div class="meta">v{{ version }} · Brand Constitution v{{ constitution.version }} · {{ blueprints|length }} blueprint(s)</div>
   </header>
+
+  {% if ai.enabled %}
+  <div class="banner on">✅ <b>Real AI is ON.</b> Agents on <code>{{ ai.agent_model }}</code> generate genuine drafts via <code>{{ ai.default_model }}</code>, using your <code>{{ ai.key_name }}</code> key.</div>
+  {% else %}
+  <div class="banner off">⚠️ <b>Real AI is OFF — output below is placeholder text.</b> Add an <code>{{ ai.key_name }}</code> key in the Secure Key Vault to switch every <code>auto</code> agent over to real drafts; no restart needed. Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>.</div>
+  {% endif %}
 
   <main>
     <section class="card">
@@ -58,10 +71,11 @@
       <h2>Secure Key Vault</h2>
       <p class="meta">Secrets are held in memory only and never returned — only a masked preview is shown.</p>
       <form method="post" action="/ui/vault/keys" class="inline">
-        <input name="name" placeholder="ANTHROPIC" required />
-        <input name="value" placeholder="secret value" required />
+        <input name="name" value="{{ ai.key_name }}" required />
+        <input name="value" type="password" placeholder="sk-ant-…" autocomplete="off" required />
         <button type="submit">Set</button>
       </form>
+      <p class="hint">Restarting clears the vault. To persist a key across restarts, set <code>BYI_KEY_{{ ai.key_name }}</code> in the environment before launching.</p>
       <table>
         <thead><tr><th>Key</th><th>Set</th><th>Preview</th></tr></thead>
         <tbody>

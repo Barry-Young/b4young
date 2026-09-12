@@ -12,29 +12,52 @@ Implements the [Phase 1 roadmap milestones](../docs/06-roadmap.md#61-phase-1-fou
   Backstory, Tools, Model — via API or the web UI.
 - **Secure Key Vault:** hold API keys in memory; secrets are never persisted or
   returned (only a masked preview). Seedable from `BYI_KEY_<NAME>` env vars.
-- **Brand Constitution v1.0:** [`brand_constitution.yaml`](./brand_constitution.yaml)
-  is injected into every agent run and enforced (banned-term flagging) on output.
-- **Activity dashboard:** run a "hello world" agent and monitor every run, its
+- **Brand Constitution v1.1:** [`brand_constitution.yaml`](./brand_constitution.yaml)
+  carries the brand's voice, audience, structural principles, preferred/banned
+  terms, and guardrails. It is injected into every agent run and enforced
+  (banned-term flagging) on output.
+- **Activity dashboard:** run an agent or a crew and monitor every run, its
   output, duration, and governance flags.
 
-By default the agent runner uses a deterministic **stub** provider, so the
-system runs with no external dependencies or API keys.
+With no API key the agent runner uses a deterministic **stub** provider, so the
+system runs with no external dependencies.
 
-### Using a real LLM (Claude)
+### Turning on real output (Claude)
 
-[`app/providers.py`](./app/providers.py) ships an `AnthropicProvider`. To make
-crews produce real output:
+Agents default to the **`auto`** model, which follows the vault:
+
+| Vault state | What agents produce |
+|---|---|
+| No `ANTHROPIC` key | Stub placeholder text — offline, free, deterministic |
+| `ANTHROPIC` key set | Real drafts from `claude-sonnet-4-6` |
+
+So adding the key is the whole switch:
+
+1. Create a key at [console.anthropic.com](https://console.anthropic.com/settings/keys).
+2. Paste it into the **Secure Key Vault** card on the dashboard as `ANTHROPIC`.
+   It takes effect on the next run — no restart, no env var.
+3. The banner at the top of the dashboard flips to **Real AI is ON**.
+
+To have the key present from startup instead, export it before launching:
 
 ```bash
-export BYI_KEY_ANTHROPIC=sk-ant-...      # key, seeded into the vault at startup
-export BYI_AGENT_MODEL=claude-sonnet-4-6 # default model for crew agents
+export BYI_KEY_ANTHROPIC=sk-ant-...      # seeded into the vault at startup
+export BYI_AGENT_MODEL=claude-sonnet-4-6 # optional: pin agents to a model
 ```
 
-Resolution is graceful: a Claude model with no key in the vault falls back to the
-stub, so a missing key never breaks a run. Individual blueprints can also set
-`model` directly (e.g. `claude-opus-4-8`). The evaluation **LLM-as-judge** uses a
-real model automatically when the `ANTHROPIC` key is present, and the heuristic
-judge otherwise.
+Notes:
+
+- The vault is **in-memory only** — nothing is written to disk, and the API
+  returns a masked preview, never the secret. Restarting clears it.
+- `BYI_AGENT_MODEL=stub` keeps agents offline even when a key is present.
+  Individual blueprints can also set `model` directly (e.g. `claude-opus-4-8`).
+- A Claude model with no key falls back to the stub rather than failing, so a
+  missing key never breaks a run — the dashboard banner and each Blackboard
+  entry's `resolved_model` / `is_stub` metadata tell you which one actually ran.
+- A rejected key or an upstream outage surfaces as a `502` with a plain-English
+  reason, and the crew run is recorded as `FAILED`.
+- The evaluation **LLM-as-judge** uses a real model automatically when the
+  `ANTHROPIC` key is present, and the heuristic judge otherwise.
 
 ## Data Plane: crews + Blackboard (Phase 2–3)
 

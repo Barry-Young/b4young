@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from . import __version__
@@ -35,6 +35,13 @@ from .models import (
     RunRequest,
     VaultKeyCreate,
     VaultKeyInfo,
+)
+from .providers import (
+    ANTHROPIC_KEY_NAME,
+    DEFAULT_AGENT_MODEL,
+    DEFAULT_ANTHROPIC_MODEL,
+    ProviderError,
+    real_generation_available,
 )
 from .runner import (
     PIPELINE,
@@ -75,12 +82,42 @@ def _seed_default_blueprint() -> None:
 _seed_default_blueprint()
 
 
+@app.exception_handler(ProviderError)
+def _provider_error_handler(request: Request, exc: ProviderError) -> JSONResponse:
+    """A bad key or an upstream outage is not a bug in this app.
+
+    The crew engine records the failure on the run and re-raises; translating it
+    here returns an actionable message instead of a bare 500.
+    """
+    return JSONResponse(status_code=502, content={"detail": str(exc)})
+
+
+def _ai_status() -> dict:
+    """Whether crews will produce real output, for the dashboard and /health.
+
+    Agents default to the `auto` model, so the vault decides: with a key, `auto`
+    agents call Claude; without one they fall back to the stub and return
+    placeholder text. Surfacing this prevents mistaking a stub run for a real one.
+    """
+    return {
+        "enabled": real_generation_available(vault),
+        "key_name": ANTHROPIC_KEY_NAME,
+        "agent_model": DEFAULT_AGENT_MODEL,
+        "default_model": DEFAULT_ANTHROPIC_MODEL,
+    }
+
+
 # --------------------------------------------------------------------------- #
 # JSON API
 # --------------------------------------------------------------------------- #
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "version": __version__, "constitution": constitution.version}
+    return {
+        "status": "ok",
+        "version": __version__,
+        "constitution": constitution.version,
+        "ai": _ai_status(),
+    }
 
 
 @app.get("/api/blueprints", response_model=list[AgentBlueprint])
@@ -257,6 +294,7 @@ def dashboard(request: Request) -> HTMLResponse:
             "blackboard": blackboard_store.list(limit=25),
             "eval_cases": evaluation.load_cases(),
             "eval_report": last_eval_report,
+            "ai": _ai_status(),
         },
     )
 
