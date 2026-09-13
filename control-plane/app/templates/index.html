@@ -115,6 +115,9 @@
 
     <section class="card full">
       <h2>Crews (Data Plane)</h2>
+      <p class="meta">Add <code>| Format: &lt;platform&gt;, &lt;length&gt;</code> to a directive to pin
+      the output — e.g. <code>Overcoming procrastination | Format: Instagram Reel, 45 seconds</code>.
+      Content Factory defaults to <code>{{ default_content_format }}</code> when none is given.</p>
       <table>
         <thead><tr><th>Crew</th><th>Description</th><th>Deploy &amp; Run</th></tr></thead>
         <tbody>
@@ -124,7 +127,7 @@
             <td class="meta">{{ c.description }}</td>
             <td>
               <form method="post" action="/ui/crews/{{ c.key.value }}/run" class="inline">
-                <input name="directive" placeholder="strategic directive…" />
+                <input name="directive" placeholder="topic | Format: platform, length" />
                 <button type="submit" class="secondary">Run crew</button>
               </form>
             </td>

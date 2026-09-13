@@ -62,3 +62,57 @@ def test_content_factory_report_includes_all_roles(client):
     report = done["report"]
     for role in ["Content Strategist", "Scriptwriter", "Voice Artist", "Video Producer"]:
         assert role in report
+
+
+# --------------------------------------------------------------------------- #
+# Format and length are pinned so the two agents cannot contradict each other
+# --------------------------------------------------------------------------- #
+def _content_factory_tasks():
+    from app.constitution import BrandConstitution
+    from app.crews import content_factory
+    from app.crews.blackboard import Blackboard
+    from app.store import BlackboardStore
+    from app.vault import Vault
+
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        crew = content_factory.build(
+            blackboard=Blackboard(BlackboardStore(Path(tmp) / "bb.json")),
+            vault=Vault(),
+            constitution=BrandConstitution({}),
+        )
+        return {t.agent.role: t.description for t in crew.tasks}
+
+
+def test_strategist_and_scriptwriter_share_one_format_rule():
+    # The Strategist used to invent a platform (it picked Substack long-form)
+    # while the Scriptwriter wrote short-form video — two contradictory artifacts
+    # from one run. Both must now be given the same rule.
+    from app.crews.content_factory import FORMAT_RULE
+
+    tasks = _content_factory_tasks()
+    assert FORMAT_RULE in tasks["Content Strategist"]
+    assert FORMAT_RULE in tasks["Scriptwriter"]
+
+
+def test_strategist_is_told_not_to_pick_its_own_platform():
+    description = _content_factory_tasks()["Content Strategist"]
+    assert "Do not choose a platform of your own." in description
+
+
+def test_format_rule_names_the_directive_syntax_and_a_default():
+    from app.crews.content_factory import DEFAULT_FORMAT, FORMAT_RULE
+
+    assert "Format: <platform>, <length>" in FORMAT_RULE
+    assert DEFAULT_FORMAT in FORMAT_RULE
+
+
+def test_scriptwriter_gets_a_hard_spoken_word_budget():
+    # Without a budget it writes until every section is covered — the first real
+    # run produced ~3 minutes of speech for a 45-second brief.
+    description = _content_factory_tasks()["Scriptwriter"]
+    assert "LENGTH IS A HARD CONSTRAINT" in description
+    assert "90 spoken words" in description
+    assert "do not count toward the budget" in description

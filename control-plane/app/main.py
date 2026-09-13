@@ -21,6 +21,7 @@ from . import __version__
 from . import crews as crew_registry
 from . import evaluation
 from .constitution import BrandConstitution
+from .crews import content_factory
 from .models import (
     ActivityLogEntry,
     AgentBlueprint,
@@ -292,6 +293,7 @@ def dashboard(request: Request) -> HTMLResponse:
             "crews": crew_registry.list_crews(),
             "crew_runs": crew_runs.list(limit=15),
             "blackboard": blackboard_store.list(limit=25),
+            "default_content_format": content_factory.DEFAULT_FORMAT,
             "eval_cases": evaluation.load_cases(),
             "eval_report": last_eval_report,
             "ai": _ai_status(),

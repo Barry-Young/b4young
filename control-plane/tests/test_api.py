@@ -124,6 +124,16 @@ def test_provider_failure_returns_an_actionable_502(client, monkeypatch):
     assert "rejected the API key" in runs[0]["error"]
 
 
+def test_dashboard_documents_the_directive_format_convention(client):
+    # The format is a convention typed into a free-text box, so the dashboard has
+    # to state it — otherwise only the source code knows it exists.
+    from app.crews.content_factory import DEFAULT_FORMAT
+
+    page = client.get("/").text
+    assert "Format: &lt;platform&gt;, &lt;length&gt;" in page
+    assert DEFAULT_FORMAT in page
+
+
 def test_dashboard_renders(client):
     r = client.get("/")
     assert r.status_code == 200
