@@ -68,7 +68,13 @@ The Control Plane can deploy and run **agent crews**
   - **Market Intelligence** — Chief Strategist + Trend Spotter + Competitor
     Analyst + Audience Profiler.
   - **Content Factory** — Executive Producer + Content Strategist + Scriptwriter
-    + Voice Artist + Video Producer.
+    + Voice Artist + Video Producer. Pin the output format in the directive:
+    `Overcoming procrastination | Format: Instagram Reel, 45 seconds`. Without a
+    `Format:` clause the crew uses its default (Instagram Reel, 45 seconds).
+    Both the Strategist and the Scriptwriter are given the same rule, so they
+    can't produce contradictory artifacts, and the Scriptwriter treats the
+    length as a hard spoken-word budget (~2 words per second) rather than
+    writing until every section is covered.
   - **Marketing & Distribution** — Campaign Manager + Social Media Manager +
     Affiliate Program Manager + Engagement Bot.
   - **Automated Service Delivery** — Product Manager + Webinar Host +
