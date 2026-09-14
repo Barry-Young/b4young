@@ -71,13 +71,25 @@ The Control Plane can deploy and run **agent crews**
   - **Market Intelligence** — Chief Strategist + Trend Spotter + Competitor
     Analyst + Audience Profiler.
   - **Content Factory** — Executive Producer + Content Strategist + Scriptwriter
-    + Voice Artist + Video Producer. Pin the output format in the directive:
-    `Overcoming procrastination | Format: Instagram Reel, 45 seconds`. Without a
-    `Format:` clause the crew uses its default (Instagram Reel, 45 seconds).
-    Both the Strategist and the Scriptwriter are given the same rule, so they
-    can't produce contradictory artifacts, and the Scriptwriter treats the
-    length as a hard spoken-word budget (~2 words per second) rather than
-    writing until every section is covered.
+    + Voice Artist + Video Producer. Pin the output in the directive with two
+    optional clauses:
+    `Overcoming procrastination | Format: Instagram Reel, 45 seconds | Track: A`.
+    - `Format: <platform>, <length>` — defaults to Instagram Reel, 45 seconds.
+      Both the Strategist and the Scriptwriter are given the same rule, so they
+      can't produce contradictory artifacts, and the Scriptwriter treats the
+      length as a hard spoken-word budget (~2 words per second) rather than
+      writing until every section is covered.
+    - `Track: A` or `Track: B` — which audience the piece is for, and so which
+      call to action is allowed. Track A (the Rebuilder) may carry a paid CTA;
+      Track B (the Hallway Walker) may not — the only doors are the Hallway
+      essay and the email list. **The default is Track B**, because it fails
+      safe: a Track A post written to B's rule only loses a sales CTA, while a
+      Track B post written to A's puts a paid ask in front of someone in a
+      vulnerable moment, which the brand's ethics rule out.
+
+    The Scriptwriter is also told the account is **faceless** — animated
+    on-screen text over stock B-roll, assembled in CapCut — so it writes
+    voiceover and stock-findable B-roll rather than shots of a presenter.
   - **Marketing & Distribution** — Campaign Manager + Social Media Manager +
     Affiliate Program Manager + Engagement Bot.
   - **Automated Service Delivery** — Product Manager + Webinar Host +

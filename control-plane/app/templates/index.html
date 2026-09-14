@@ -115,9 +115,11 @@
 
     <section class="card full">
       <h2>Crews (Data Plane)</h2>
-      <p class="meta">Add <code>| Format: &lt;platform&gt;, &lt;length&gt;</code> to a directive to pin
-      the output — e.g. <code>Overcoming procrastination | Format: Instagram Reel, 45 seconds</code>.
-      Content Factory defaults to <code>{{ default_content_format }}</code> when none is given.</p>
+      <p class="meta">Pin the output with <code>| Format: &lt;platform&gt;, &lt;length&gt;</code> and
+      <code>| Track: A</code> or <code>| Track: B</code> — e.g.
+      <code>Overcoming procrastination | Format: Instagram Reel, 45 seconds | Track: A</code>.
+      Content Factory defaults to <code>{{ default_content_format }}</code> and
+      <strong>Track {{ default_content_track }}</strong> (the Hallway — no paid CTA) when none is given.</p>
       <table>
         <thead><tr><th>Crew</th><th>Description</th><th>Deploy &amp; Run</th></tr></thead>
         <tbody>
