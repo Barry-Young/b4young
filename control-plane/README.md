@@ -12,10 +12,13 @@ Implements the [Phase 1 roadmap milestones](../docs/06-roadmap.md#61-phase-1-fou
   Backstory, Tools, Model — via API or the web UI.
 - **Secure Key Vault:** hold API keys in memory; secrets are never persisted or
   returned (only a masked preview). Seedable from `BYI_KEY_<NAME>` env vars.
-- **Brand Constitution v1.1:** [`brand_constitution.yaml`](./brand_constitution.yaml)
+- **Brand Constitution v2.0:** [`brand_constitution.yaml`](./brand_constitution.yaml)
   carries the brand's voice, audience, structural principles, preferred/banned
   terms, and guardrails. It is injected into every agent run and enforced
-  (banned-term flagging) on output.
+  (banned-term flagging) on output. **It is a faithful encoding of the brand's
+  own `01-identity/brand-constitution.md`, not an independent draft** — when
+  that document changes, change this file to match, and don't evolve this file
+  on its own.
 - **Activity dashboard:** run an agent or a crew and monitor every run, its
   output, duration, and governance flags.
 

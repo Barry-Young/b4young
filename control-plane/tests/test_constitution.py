@@ -10,16 +10,46 @@ from __future__ import annotations
 from app.constitution import BrandConstitution
 
 
-def test_shipped_constitution_carries_the_validated_voice():
+def test_shipped_constitution_matches_the_source_document():
+    """The YAML mirrors Barry's own `01-identity/brand-constitution.md`.
+
+    v1.1 was written from an approved sample rather than that document and
+    inverted the defining rule — it told agents to motivate. These assertions
+    pin the parts that drifted.
+    """
     c = BrandConstitution.load()
-    assert c.version.startswith("1.1")
-    assert c.voice.get("tone")
-    assert c.voice.get("audience")
-    assert c.principles, "principles are what give the output its shape"
-    # Guardrails that protect the audience, not just the prose.
-    joined = " ".join(c.guardrails).lower()
-    assert "medical" in joined
-    assert "shame" in joined
+    assert c.version.startswith("2.")
+
+    tone = c.voice["tone"].lower()
+    assert "clarifies, doesn't motivate" in tone
+    assert "never a guru" in tone
+
+    principles = " ".join(c.principles).lower()
+    assert "staccato" in principles, "the signature register"
+    assert "concrete over cosmic" in principles
+    assert "first person" in principles, "lived experience is the credential"
+    assert "one idea, one foot" in principles
+
+    guardrails = " ".join(c.guardrails).lower()
+    assert "i promise to help you see what's actually there" in guardrails, "canon"
+    assert "clarify, do not motivate" in guardrails
+    assert "not a counselor, therapist" in guardrails
+
+
+def test_the_three_banned_categories_are_all_covered():
+    # cosmic (rule 2), clinical (rule 5, a legal line), hype (rule 6).
+    banned = {t.lower() for t in BrandConstitution.load().banned_terms}
+    assert {"vibrations", "frequencies"} <= banned, "cosmic"
+    assert {"trauma", "anxiety", "healing", "diagnosis"} <= banned, "clinical"
+    assert {"crush it", "hustle harder"} <= banned, "hype"
+
+
+def test_the_trade_vocabulary_is_preferred():
+    preferred = {t.lower() for t in BrandConstitution.load().preferred_terms}
+    assert {"footing", "blueprint", "load-bearing"} <= preferred
+    # Corporate filler from v1.1 that is not in the source document.
+    assert "growth mindset" not in preferred
+    assert "strategic agility" not in preferred
 
 
 def test_system_prompt_includes_every_policy_section():
