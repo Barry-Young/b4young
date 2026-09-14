@@ -294,6 +294,7 @@ def dashboard(request: Request) -> HTMLResponse:
             "crew_runs": crew_runs.list(limit=15),
             "blackboard": blackboard_store.list(limit=25),
             "default_content_format": content_factory.DEFAULT_FORMAT,
+            "default_content_track": content_factory.DEFAULT_TRACK,
             "eval_cases": evaluation.load_cases(),
             "eval_report": last_eval_report,
             "ai": _ai_status(),

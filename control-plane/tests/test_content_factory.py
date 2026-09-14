@@ -116,3 +116,45 @@ def test_scriptwriter_gets_a_hard_spoken_word_budget():
     assert "LENGTH IS A HARD CONSTRAINT" in description
     assert "90 spoken words" in description
     assert "do not count toward the budget" in description
+
+
+# --------------------------------------------------------------------------- #
+# Faceless production format and the two tracks' CTA rules
+# --------------------------------------------------------------------------- #
+def test_scriptwriter_is_told_the_account_is_faceless():
+    # It wrote "direct eye contact to camera" for an account that has no camera.
+    from app.crews.content_factory import PRODUCTION_RULE
+
+    description = _content_factory_tasks()["Scriptwriter"]
+    assert PRODUCTION_RULE in description
+    assert "faceless" in PRODUCTION_RULE
+    assert "no presenter and no camera" in PRODUCTION_RULE
+    assert "voiceover only" in PRODUCTION_RULE
+
+
+def test_both_agents_get_the_track_cta_rule():
+    from app.crews.content_factory import TRACK_RULE
+
+    tasks = _content_factory_tasks()
+    assert TRACK_RULE in tasks["Content Strategist"]
+    assert TRACK_RULE in tasks["Scriptwriter"]
+
+
+def test_track_b_is_the_default_and_forbids_a_paid_cta():
+    # B fails safe: a Track A post given B's rule only loses a sales CTA, while
+    # a Track B post given A's puts a paid ask in front of someone vulnerable.
+    from app.crews.content_factory import DEFAULT_TRACK, TRACK_RULE
+
+    assert DEFAULT_TRACK == "B"
+    assert f"assume Track {DEFAULT_TRACK}" in TRACK_RULE
+    assert "NO paid call to action" in TRACK_RULE
+    assert "treat it as Track B" in TRACK_RULE, "the unsure case must fail safe"
+
+
+def test_tasks_do_not_contradict_the_constitution():
+    # The Constitution says "one idea, one foot" and "clarify, do not motivate".
+    # These task lines were written against the old v1.1 and said the opposite.
+    joined = " ".join(_content_factory_tasks().values())
+    assert "one idea, one foot" in joined.lower()
+    assert "two or three concrete steps" not in joined
+    assert "short encouraging line" not in joined

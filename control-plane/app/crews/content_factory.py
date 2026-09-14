@@ -36,6 +36,40 @@ FORMAT_RULE = (
 # the structure is complete and lands 3+ minutes of speech in a 45-second brief.
 SPOKEN_WORDS_PER_SECOND = 2
 
+# The account is faceless (04-content/content-engine.md): animated on-screen
+# text over stock B-roll, assembled in CapCut. Nothing told the Scriptwriter
+# that, so it wrote shots like "direct eye contact to camera" — direction that
+# cannot be filmed for this account.
+PRODUCTION_RULE = (
+    "PRODUCTION FORMAT. The account is faceless: animated on-screen text over "
+    "stock B-roll, assembled in CapCut. There is no presenter and no camera. "
+    "Never write a shot of a person speaking, eye contact with the lens, or any "
+    "direction that needs someone on screen. Spoken lines are voiceover only, "
+    "and every B-roll suggestion must be something findable as stock footage."
+)
+
+# The two tracks carry different CTA rules (04-content/content-engine.md,
+# 02-audience/icp-*.md). Track A monetises now; Track B is paid-GATED — a paid
+# ask there reaches someone in a vulnerable moment, which the brand ethics rule
+# out. The directive may name a track; the default is B because it fails safe:
+# a Track A post given B's rule only loses a sales CTA, while a Track B post
+# given A's breaks an ethics line.
+DEFAULT_TRACK = "B"
+
+TRACK_RULE = (
+    "TRACK. The directive may name one, written as `Track: A` or `Track: B`. "
+    f"If it does not, assume Track {DEFAULT_TRACK}.\n"
+    "Track A (the Rebuilder — solopreneurs and career changers between "
+    "chapters): a paid call to action is allowed.\n"
+    "Track B (the Hallway Walker — life upended after an awakening, a loss, or "
+    "a slow unraveling): NO paid call to action, no product, no price, no "
+    "booking. The only doors are the Hallway essay and the email list, reached "
+    "through the link in bio. The job of the piece is recognition, not "
+    "conversion. If you are unsure which track a topic belongs to, treat it as "
+    "Track B."
+)
+
+
 DESCRIPTION = (
     "An autonomous production house: turn a strategic brief into a brand-aligned "
     "content package (outline, script, voiceover, video), with human approval "
@@ -61,12 +95,15 @@ def build(
             description=(
                 "Refine the topic into a compelling angle and a detailed outline. "
                 "State the specific difficulty the audience is living with, the "
-                "reframe that shifts it, and the two or three concrete steps the "
-                "piece will leave them with.\n\n"
+                "reframe that shifts it, and the single next step the piece will "
+                "leave them with — one idea, one foot, not a numbered system.\n\n"
                 f"{FORMAT_RULE}\n"
                 "Open the outline by stating the platform and length you are "
                 "working to, then size every section to fit that length. Do not "
-                "choose a platform of your own."
+                "choose a platform of your own.\n\n"
+                f"{TRACK_RULE}\n"
+                "State the track you are working to alongside the platform, and "
+                "plan the closing call to action to match it."
             ),
             agent=Agent(
                 role="Content Strategist",
@@ -81,8 +118,11 @@ def build(
                 "Deliver a package that can be filmed as-is:\n"
                 "1. Hook — the first three seconds, as spoken words plus on-screen text.\n"
                 "2. Body — name the real difficulty, then the reframe.\n"
-                "3. Practical anchor — two or three concrete, small steps.\n"
-                "4. Close — a short encouraging line and a soft call to action.\n"
+                "3. Practical anchor — one next step the reader can actually take. "
+                "One idea, one foot: not a numbered system, not a framework.\n"
+                "4. Close — recognition, then the call to action for the track in "
+                "force. No pep talk and no inspirational sign-off; the job is to "
+                "show what is there, not to rally anyone.\n"
                 "5. Production notes — on-screen text and b-roll per section.\n"
                 "6. Caption — post copy plus relevant hashtags.\n"
                 "7. Two alternate hooks to A/B test.\n"
@@ -100,14 +140,16 @@ def build(
                 "On-screen text, production notes, the caption and the hashtags "
                 "are read, not spoken, and do not count toward the budget.\n"
                 "State the spoken word count and the length you wrote to at the "
-                "top of the package."
+                "top of the package.\n\n"
+                f"{PRODUCTION_RULE}\n\n"
+                f"{TRACK_RULE}"
             ),
             agent=Agent(
                 role="Scriptwriter",
                 goal=(
                     "Produce a ready-to-film, brand-aligned short-form script package: "
-                    "hook, body, practical steps, close, production notes, caption with "
-                    "hashtags, and alternate hooks to test."
+                    "hook, body, one practical next step, close, production notes, "
+                    "caption with hashtags, and alternate hooks to test."
                 ),
                 backstory=(
                     "A short-form specialist who has studied what makes the first three "
