@@ -86,6 +86,25 @@ def _content_factory_tasks():
         return {t.agent.role: t.description for t in crew.tasks}
 
 
+def _content_factory_agents():
+    from app.constitution import BrandConstitution
+    from app.crews import content_factory
+    from app.crews.blackboard import Blackboard
+    from app.store import BlackboardStore
+    from app.vault import Vault
+
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        crew = content_factory.build(
+            blackboard=Blackboard(BlackboardStore(Path(tmp) / "bb.json")),
+            vault=Vault(),
+            constitution=BrandConstitution({}),
+        )
+        return {t.agent.role: t.agent for t in crew.tasks}
+
+
 def test_strategist_and_scriptwriter_share_one_format_rule():
     # The Strategist used to invent a platform (it picked Substack long-form)
     # while the Scriptwriter wrote short-form video — two contradictory artifacts
@@ -158,3 +177,163 @@ def test_tasks_do_not_contradict_the_constitution():
     assert "one idea, one foot" in joined.lower()
     assert "two or three concrete steps" not in joined
     assert "short encouraging line" not in joined
+
+
+def test_both_agents_get_the_faceless_production_rule():
+    """The Strategist planned "face to camera" while the Scriptwriter wrote voiceover.
+
+    The rule reached only the Scriptwriter, so the two artifacts from one run
+    disagreed about whether a presenter exists — the same class of contradiction
+    that sharing FORMAT_RULE was introduced to prevent.
+    """
+    from app.crews.content_factory import PRODUCTION_RULE
+
+    tasks = _content_factory_tasks()
+    assert PRODUCTION_RULE in tasks["Content Strategist"]
+    assert PRODUCTION_RULE in tasks["Scriptwriter"]
+
+
+def test_length_is_read_from_the_directive_and_falls_back_to_the_default():
+    from app.crews.content_factory import parse_length_seconds
+
+    assert parse_length_seconds("Topic | Format: Instagram Reel, 45 seconds") == 45
+    assert parse_length_seconds("Topic | Format: YouTube Short, 1 minute") == 60
+    assert parse_length_seconds("Topic | Format: TikTok, 90 secs") == 90
+    # No Format clause: the crew's own default is what the script is judged by.
+    assert parse_length_seconds("Regaining ground") == 45
+
+
+def test_only_marked_lines_count_toward_the_spoken_budget():
+    from app.crews.content_factory import spoken_words
+
+    package = "\n".join(
+        [
+            "# SCRIPT PACKAGE",
+            "**Spoken word count:** 4 words",
+            "VO: Something opened up — and now nothing fits.",
+            "**On-screen text:** *something opened up*",
+            "| Hook | Empty hallway, low light |",
+            "#spiritualawakening #thehallway",
+        ]
+    )
+    # The em dash is punctuation, and nothing outside the marked line is spoken.
+    assert spoken_words(package) == [
+        "Something", "opened", "up", "and", "now", "nothing", "fits.",
+    ]
+
+
+def test_a_script_that_overruns_its_length_is_flagged():
+    # The real defect: a 45-second script claiming 89 words that ran to ~120.
+    from app.crews.content_factory import check_script_length
+
+    directive = "Regaining ground | Format: Instagram Reel, 45 seconds"
+    overrun = "\n".join(f"VO: {'word ' * 10}" for _ in range(12))
+
+    flags = check_script_length(overrun, directive)
+    assert len(flags) == 1
+    assert "overruns its length" in flags[0]
+    assert "120 spoken words" in flags[0]
+    assert "45-second budget" in flags[0]
+
+    # Inside the budget, and a shade over it, are both fine.
+    assert check_script_length("\n".join(["VO: word word"] * 40), directive) == []
+    assert check_script_length("\n".join(["VO: word word"] * 48), directive) == []
+
+
+def test_an_unmarked_script_is_flagged_rather_than_silently_passing():
+    # Without the marker the budget cannot be measured. Saying so beats a green
+    # result that means "not checked".
+    from app.crews.content_factory import check_script_length
+
+    flags = check_script_length("**Spoken:** nothing is marked", "Format: Reel, 45 seconds")
+    assert len(flags) == 1
+    assert "not marked" in flags[0]
+
+
+def test_the_scriptwriter_is_told_to_mark_spoken_lines_and_is_checked():
+    from app.crews.content_factory import VO_PREFIX, check_script_length
+
+    tasks = _content_factory_tasks()
+    assert VO_PREFIX in tasks["Scriptwriter"]
+
+    scriptwriter = _content_factory_agents()["Scriptwriter"]
+    assert scriptwriter.output_check is check_script_length
+
+
+class _FakeProvider:
+    """A non-stub provider returning a fixed reply, so checks actually run."""
+
+    name = "fake"
+    is_stub = False
+
+    def __init__(self, reply: str) -> None:
+        self._reply = reply
+
+    def generate(self, prompt: str, *, system: str | None = None) -> str:
+        return self._reply
+
+
+def _run_scriptwriter(monkeypatch, reply: str, directive: str):
+    """Run the real Scriptwriter agent over a fixed reply, return its entry."""
+    import tempfile
+    from pathlib import Path
+
+    from app.constitution import BrandConstitution
+    from app.crews import base
+    from app.crews.blackboard import Blackboard, EventBus
+    from app.models import CrewName
+    from app.store import BlackboardStore
+    from app.vault import Vault
+
+    monkeypatch.setattr(base, "get_provider", lambda model, vault: _FakeProvider(reply))
+    agent = _content_factory_agents()["Scriptwriter"]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        return agent.perform_task(
+            description="write it",
+            directive=directive,
+            crew=CrewName.CONTENT_FACTORY,
+            blackboard=Blackboard(BlackboardStore(Path(tmp) / "bb.json")),
+            event_bus=EventBus(),
+            vault=Vault(),
+            constitution=BrandConstitution({}),
+        )
+
+
+def test_the_length_flag_reaches_the_blackboard(monkeypatch):
+    # A flag is only useful if it lands on the artifact the human reads.
+    overrun = "\n".join(f"VO: {'word ' * 10}" for _ in range(12))
+    entry = _run_scriptwriter(
+        monkeypatch, overrun, "Regaining ground | Format: Instagram Reel, 45 seconds"
+    )
+
+    flags = entry.metadata["governance_flags"]
+    assert any("overruns its length" in f for f in flags)
+    assert entry.governance_flags == flags, "and reaches the dashboard accessor"
+
+
+def test_a_script_inside_its_budget_carries_no_flag(monkeypatch):
+    entry = _run_scriptwriter(
+        monkeypatch,
+        "\n".join(["VO: word word"] * 40),
+        "Regaining ground | Format: Instagram Reel, 45 seconds",
+    )
+    assert entry.metadata["governance_flags"] == []
+
+
+def test_placeholder_output_is_not_judged_as_a_script(client):
+    """Artifact rules have nothing to say about stub text.
+
+    Run with no key, every script would otherwise be flagged for not marking
+    spoken lines — a complaint that the placeholder isn't a script, which tells
+    nobody anything.
+    """
+    client.post(
+        "/api/crews/content_factory/run",
+        json={"input": "Regaining ground | Format: Instagram Reel, 45 seconds"},
+    )
+
+    entries = client.get("/api/blackboard").json()
+    script = next(e for e in entries if e["artifact_type"] == "script")
+    assert script["metadata"]["is_stub"] is True
+    assert script["metadata"]["governance_flags"] == []

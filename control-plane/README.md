@@ -87,9 +87,17 @@ The Control Plane can deploy and run **agent crews**
       Track B post written to A's puts a paid ask in front of someone in a
       vulnerable moment, which the brand's ethics rule out.
 
-    The Scriptwriter is also told the account is **faceless** — animated
-    on-screen text over stock B-roll, assembled in CapCut — so it writes
+    Both agents are also told the account is **faceless** — animated on-screen
+    text over stock B-roll, assembled in CapCut — so they plan and write
     voiceover and stock-findable B-roll rather than shots of a presenter.
+
+    The Scriptwriter marks every spoken line with `VO:`, and the crew **counts
+    those words itself** and flags a script that overruns its length. Models
+    cannot count their own output — one 45-second script reported 89 spoken
+    words and ran to about 120 — so the budget is checked rather than trusted.
+    The flag appears on the Blackboard entry beside the script, next to any
+    Brand Constitution violations. Artifact checks are skipped on stub output,
+    which is placeholder text rather than a script.
   - **Marketing & Distribution** — Campaign Manager + Social Media Manager +
     Affiliate Program Manager + Engagement Bot.
   - **Automated Service Delivery** — Product Manager + Webinar Host +

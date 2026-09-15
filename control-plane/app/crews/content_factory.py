@@ -10,6 +10,8 @@ for in Phase 3 of the roadmap (docs/06-roadmap.md, 6.3).
 
 from __future__ import annotations
 
+import re
+
 from ..constitution import BrandConstitution
 from ..models import CrewName
 from ..vault import Vault
@@ -35,6 +37,77 @@ FORMAT_RULE = (
 # video is about 90 spoken words. Without a budget the Scriptwriter writes until
 # the structure is complete and lands 3+ minutes of speech in a 45-second brief.
 SPOKEN_WORDS_PER_SECOND = 2
+
+# The Scriptwriter reports its own spoken word count and gets it wrong — one
+# 45-second script claimed 89 words and ran to about 120, half a minute over.
+# Models cannot count their own output reliably, so the budget is checked here
+# instead of trusted. Checking needs the spoken lines to be separable from
+# on-screen text and production notes, hence the prefix: every spoken line
+# stands alone, marked.
+VO_PREFIX = "VO:"
+
+# A script a shade over budget is not worth a flag; a script half again as long
+# is the defect this catches.
+LENGTH_TOLERANCE = 1.1
+
+_LENGTH_PATTERN = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(seconds?|secs?|s|minutes?|mins?|m)\b", re.IGNORECASE
+)
+_WORD_PATTERN = re.compile(r"[0-9A-Za-z]")
+
+
+def parse_length_seconds(directive: str) -> int | None:
+    """Seconds of runtime the directive asks for, from its `Format:` clause.
+
+    Falls back to the default format, so an unqualified directive is still
+    checked. Returns None only when neither names a length.
+    """
+    for text in (directive, DEFAULT_FORMAT):
+        match = _LENGTH_PATTERN.search(text or "")
+        if match is None:
+            continue
+        value, unit = float(match.group(1)), match.group(2).lower()
+        return round(value * 60) if unit.startswith("m") else round(value)
+    return None
+
+
+def spoken_words(output: str) -> list[str]:
+    """Every word the voiceover actually says, from the marked lines.
+
+    Punctuation-only tokens (a standalone em dash) are not words.
+    """
+    words: list[str] = []
+    for line in output.splitlines():
+        stripped = line.strip().lstrip("*_- ").strip()
+        if not stripped.upper().startswith(VO_PREFIX):
+            continue
+        spoken = stripped[len(VO_PREFIX) :]
+        words.extend(w for w in spoken.split() if _WORD_PATTERN.search(w))
+    return words
+
+
+def check_script_length(output: str, directive: str) -> list[str]:
+    """Flag a script that overruns its budget, or that can't be measured."""
+    seconds = parse_length_seconds(directive)
+    if seconds is None:
+        return []
+
+    budget = seconds * SPOKEN_WORDS_PER_SECOND
+    words = spoken_words(output)
+    if not words:
+        return [
+            f"spoken lines are not marked with `{VO_PREFIX}`, so the "
+            f"{seconds}-second length budget could not be checked"
+        ]
+
+    count = len(words)
+    if count > budget * LENGTH_TOLERANCE:
+        over = round(count / SPOKEN_WORDS_PER_SECOND)
+        return [
+            f"script overruns its length: {count} spoken words is about "
+            f"{over} seconds, against a {seconds}-second budget of ~{budget} words"
+        ]
+    return []
 
 # The account is faceless (04-content/content-engine.md): animated on-screen
 # text over stock B-roll, assembled in CapCut. Nothing told the Scriptwriter
@@ -101,6 +174,7 @@ def build(
                 "Open the outline by stating the platform and length you are "
                 "working to, then size every section to fit that length. Do not "
                 "choose a platform of your own.\n\n"
+                f"{PRODUCTION_RULE}\n\n"
                 f"{TRACK_RULE}\n"
                 "State the track you are working to alongside the platform, and "
                 "plan the closing call to action to match it."
@@ -139,6 +213,12 @@ def build(
                 "before you exceed it.\n"
                 "On-screen text, production notes, the caption and the hashtags "
                 "are read, not spoken, and do not count toward the budget.\n"
+                f"Put every spoken line on its own line beginning with "
+                f"`{VO_PREFIX}` — nothing else on that line, and nothing spoken "
+                "anywhere else. On-screen text, production notes and the caption "
+                f"are never marked `{VO_PREFIX}`. The app counts those lines to "
+                "check the budget, so a script that overruns is flagged whatever "
+                "count you claim.\n"
                 "State the spoken word count and the length you wrote to at the "
                 "top of the package.\n\n"
                 f"{PRODUCTION_RULE}\n\n"
@@ -157,6 +237,7 @@ def build(
                     "person watching alone, never for an audience."
                 ),
                 artifact_type="script",
+                output_check=check_script_length,
             ),
             checkpoint=True,  # HITL: approve the script before voiceover
         ),

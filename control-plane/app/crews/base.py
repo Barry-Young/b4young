@@ -12,6 +12,7 @@ engine.py; this module holds the primitives.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from ..constitution import BrandConstitution
@@ -30,6 +31,12 @@ class Agent:
     backstory: str
     artifact_type: str
     model: str = field(default_factory=lambda: DEFAULT_AGENT_MODEL)
+    # An optional artifact-specific check, run alongside the Brand Constitution's
+    # and merged into the same governance flags. The Constitution polices voice,
+    # which is shared by every agent; a rule like "a 45-second script is about 90
+    # spoken words" belongs to one artifact and cannot live there. Takes the
+    # output and the directive, returns flags.
+    output_check: Callable[[str, str], list[str]] | None = None
 
     def perform_task(
         self,
@@ -49,6 +56,12 @@ class Agent:
         prompt = f"{description}\n\nDirective: {directive}".strip()
         output = provider.generate(prompt, system=system)
         flags = constitution.check_output(output)
+        # Placeholder text is not the artifact, so artifact-specific rules have
+        # nothing to say about it — running them on a stub only reports that the
+        # stub isn't a script. Voice rules still apply: a banned term in stub
+        # output is worth seeing.
+        if self.output_check is not None and not provider.is_stub:
+            flags = flags + self.output_check(output, directive)
 
         entry = blackboard.write_entry(
             crew=crew,
