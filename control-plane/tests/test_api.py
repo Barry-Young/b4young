@@ -138,3 +138,51 @@ def test_dashboard_renders(client):
     r = client.get("/")
     assert r.status_code == 200
     assert "Control Plane" in r.text
+
+
+def test_blackboard_shows_the_artifact_text_not_just_its_label(client):
+    """The HITL gate is meaningless if you can't read what you're approving.
+
+    The card used to show only metadata — crew, producer, artifact type — so the
+    only way to read a generated script was to hit /api/blackboard by hand and
+    pick it out of the raw JSON.
+    """
+    client.post("/api/crews/content_factory/run", json={"input": "Regaining ground"})
+
+    page = client.get("/").text
+    entries = client.get("/api/blackboard").json()
+    script = next(e for e in entries if e["artifact_type"] == "script")
+
+    # The script's own text is on the page, and the entry awaiting approval is
+    # expanded so it is read rather than skipped past.
+    assert script["payload"]["output"][:60] in page
+    assert "<details class=\"artifact\" open>" in page
+    assert "Read the script" in page
+    assert "Directive: Regaining ground" in page
+
+
+def test_blackboard_marks_placeholder_text_as_placeholder(client):
+    # With no key every artifact is stub output. Saying so on the artifact
+    # itself stops a placeholder being mistaken for a draft worth approving.
+    client.post("/api/crews/content_factory/run", json={"input": "Regaining ground"})
+    assert "placeholder text — no API key" in client.get("/").text
+
+
+def test_blackboard_surfaces_governance_flags_on_the_artifact(client):
+    # A banned term is a Brand Constitution violation; it belongs next to the
+    # text that carries it, not only in the JSON.
+    from app.models import BlackboardEntry, BlackboardStatus, CrewName
+
+    entry = BlackboardEntry(
+        crew=CrewName.CONTENT_FACTORY,
+        producer_agent="Content Strategist",
+        artifact_type="content_outline",
+        status=BlackboardStatus.COMPLETE,
+        payload={"output": "It is not a diagnosis.", "directive": "Regaining ground"},
+        metadata={"governance_flags": ["banned term used: 'diagnosis'"]},
+    )
+    import app.main as main
+
+    main.blackboard_store.add(entry)
+
+    assert "banned term used: &#39;diagnosis&#39;" in client.get("/").text
