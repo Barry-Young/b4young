@@ -146,6 +146,34 @@ class BlackboardEntry(BaseModel):
 
         return json.loads(self.model_dump_json(exclude_none=True))
 
+    # The payload and metadata are free-form dicts so the Blackboard stays
+    # schema-versioned rather than typed per artifact. These accessors give the
+    # dashboard a safe, total view of the parts it displays: an entry written by
+    # an older crew, or one whose agent produced nothing, renders as empty
+    # instead of raising in a template.
+    @property
+    def output_text(self) -> str:
+        """The artifact's generated text — the script, outline or brief itself."""
+        value = self.payload.get("output")
+        return value if isinstance(value, str) else ""
+
+    @property
+    def directive(self) -> str:
+        """The directive the crew was run with, for context on the artifact."""
+        value = self.payload.get("directive")
+        return value if isinstance(value, str) else ""
+
+    @property
+    def governance_flags(self) -> list[str]:
+        """Brand Constitution violations found in this artifact's output."""
+        flags = (self.metadata or {}).get("governance_flags") or []
+        return [str(flag) for flag in flags]
+
+    @property
+    def is_stub(self) -> bool:
+        """True when placeholder text, not a real model draft."""
+        return bool((self.metadata or {}).get("is_stub"))
+
 
 class CrewRunStatus(str, Enum):
     """Lifecycle of a crew run (which may pause at HITL checkpoints)."""

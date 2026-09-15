@@ -39,6 +39,12 @@
     .banner b { color:var(--ink); }
     .banner a { color:var(--accent); }
     .hint { color:var(--muted); font-size:.75rem; margin:.35rem 0 0; }
+    .artifact-cell { padding-top:0; }
+    .artifact-cell .directive { color:var(--muted); font-size:.75rem; margin:0 0 .35rem; }
+    details.artifact summary { cursor:pointer; color:var(--accent); font-size:.8rem; padding:.15rem 0; }
+    details.artifact pre { max-height:24rem; overflow:auto; margin:.4rem 0 .2rem; padding:.7rem .8rem;
+      background:#0b1220; border:1px solid #334155; border-radius:6px; color:var(--ink);
+      font-size:.8rem; line-height:1.5; }
   </style>
 </head>
 <body>
@@ -186,6 +192,8 @@
 
     <section class="card full">
       <h2>Blackboard</h2>
+      <p class="meta">Every artifact a crew produces. An entry waiting on you opens
+      by default — read the draft before approving it.</p>
       <table>
         <thead><tr><th>When</th><th>Crew</th><th>Producer</th><th>Artifact</th><th>Status</th></tr></thead>
         <tbody>
@@ -204,6 +212,20 @@
               {% endif %}
             </td>
           </tr>
+          {% if e.output_text or e.governance_flags %}
+          <tr>
+            <td colspan="5" class="artifact-cell">
+              {% if e.directive %}<p class="directive">Directive: {{ e.directive }}</p>{% endif %}
+              {% for f in e.governance_flags %}<div class="flag">⚠ {{ f }}</div>{% endfor %}
+              {% if e.output_text %}
+              <details class="artifact"{% if e.status.value == "AWAITING_APPROVAL" %} open{% endif %}>
+                <summary>Read the {{ e.artifact_type.replace("_", " ") }}{% if e.is_stub %} (placeholder text — no API key){% endif %}</summary>
+                <pre>{{ e.output_text }}</pre>
+              </details>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
         {% else %}
           <tr><td colspan="5" class="meta">No Blackboard entries — run a crew above.</td></tr>
         {% endfor %}
