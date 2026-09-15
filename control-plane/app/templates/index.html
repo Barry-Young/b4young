@@ -50,7 +50,7 @@
 <body>
   <header>
     <h1>🛠️ Blueprint Builder — Control Plane</h1>
-    <div class="meta">v{{ version }} · Brand Constitution v{{ constitution.version }} · {{ blueprints|length }} blueprint(s)</div>
+    <div class="meta">v{{ version }} · Brand Constitution v{{ constitution.version }}{% if constitution.voice_samples %} · Voice samples v{{ constitution.voice_samples.version }}{% endif %} · {{ blueprints|length }} blueprint(s)</div>
   </header>
 
   {% if ai.enabled %}

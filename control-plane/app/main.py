@@ -117,6 +117,7 @@ def health() -> dict:
         "status": "ok",
         "version": __version__,
         "constitution": constitution.version,
+        "voice_samples": constitution.voice_samples.version,
         "ai": _ai_status(),
     }
 

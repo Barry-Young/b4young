@@ -1,0 +1,123 @@
+# Observed voice — evidence, not opinion.
+#
+# brand_constitution.yaml states the voice the brand intends. This file shows
+# the voice as actually written, in Barry's own sentences. The two are
+# different kinds of thing and both are injected: the Constitution describes,
+# this demonstrates. A model given only a description produces a competent
+# impression of it, which is what "sounds like me to some extent" meant.
+#
+# PROVENANCE. Every sample here is Barry's own writing:
+#   * 04-content/the-hallway.md — the canonical essay (LOCKED)
+#   * rewrites Barry made of three generated lines, 2026-09-15
+# Nothing in this file is drafted, improved or invented. Do not add a rule
+# that no sample below supports, and do not edit a sample to read better —
+# an edited sample is no longer evidence.
+#
+# Capitalisation of the rewrites is normalised (they were typed quickly on a
+# phone); the words and the punctuation between them are untouched.
+
+version: "1.0.0"
+
+# ---------------------------------------------------------------------------
+# Samples: how the sentences actually go.
+# ---------------------------------------------------------------------------
+samples:
+  - shows: >-
+      The explaining register: flowing, comma-chained, one breath. This is
+      the default, not the exception.
+    source: the-hallway.md
+    text: >-
+      In the room was the working version of me, and he was good. He could run
+      the day, handle the people, handle the trade, do the work well.
+
+  - shows: Staccato used to hammer a point — insistence, not general texture.
+    source: the-hallway.md
+    text: All the time. Not once. Not occasionally. All the time.
+
+  - shows: Staccato used to land and name a thing.
+    source: the-hallway.md
+    text: That's the hallway. I've stood in it.
+
+  - shows: A one-word sentence as the emotional beat, after a long sentence.
+    source: the-hallway.md
+    text: >-
+      I was becoming the person I had been denying access to for a very long
+      time. Me.
+
+  - shows: >-
+      The reader's experience described in plain language, comma-chained —
+      no metaphor reached for, no clinical or cosmic framing.
+    source: the-hallway.md
+    text: >-
+      Maybe yours doesn't look like flashing light or numbers — maybe it was a
+      loss, or a slow unraveling, or a day everything you'd built quietly
+      stopped making sense.
+
+  - shows: The canon promise. Nothing may overpromise past this.
+    source: the-hallway.md
+    text: >-
+      I don't promise to tell you what it all means. I promise to help you see
+      what's actually there, and where the solid ground is.
+
+# ---------------------------------------------------------------------------
+# Rewrites: lines this system generated, and what Barry changed them to.
+# The gap between the pair is the correction — it is worth more than either
+# line alone, because it shows the drift rather than describing it.
+# ---------------------------------------------------------------------------
+rewrites:
+  - generated: It's not a breakdown. It's not a breakthrough either — not yet.
+    barry: It's not a breakdown and it's not a breakthrough.
+    changed: >-
+      Two chopped sentences joined into one with "and", and the forecast
+      ("not yet") cut.
+
+  - generated: And nobody around you knows what you're standing in.
+    barry: Nobody knows what you're going through or experiencing.
+    changed: >-
+      A metaphor with nothing attached to it ("standing in" with no named
+      place) replaced by plain speech. Barry writes "standing in that hallway"
+      constantly — the hallway is what makes it work.
+
+  - generated: Write down what's still true. Not what you believe — what you actually know.
+    barry: Write down your truths, what you know, not what you believe.
+    changed: >-
+      Full stop and em dash replaced by commas, one flowing line. "What's
+      still true" — abstract — became "your truths", addressed to the person.
+
+# ---------------------------------------------------------------------------
+# Rules derived from the evidence above. Each cites what produced it.
+# ---------------------------------------------------------------------------
+observations:
+  - rule: >-
+      Write in flowing, comma-chained sentences by default. Staccato — short
+      declarative fragments — is punctuation, not the register: use it to
+      hammer a point, to land a thing, to name what something is. A passage
+      written entirely in fragments is wrong, and it spends the effect of the
+      fragments that matter.
+    evidence: >-
+      All three rewrites joined what had been chopped. The essay's explaining
+      passages are comma-chained; its fragments sit at the landings ("That's
+      the hallway. I've stood in it." / "Me.").
+
+  - rule: >-
+      A metaphor must name its place or object — the hallway, the footing, the
+      ground moving. A spatial or structural phrase with nothing attached is
+      vague, and Barry cuts it. When describing what a person is living
+      through, plain speech beats a reached-for image.
+    evidence: >-
+      "what you're standing in" was replaced with "what you're going through
+      or experiencing", while the essay reads "If you're standing in that
+      hallway right now".
+
+# ---------------------------------------------------------------------------
+# Not yet rules. Recorded so they are not lost, and deliberately not injected:
+# one deleted phrase is not enough to steer on.
+# ---------------------------------------------------------------------------
+open_questions:
+  - question: >-
+      Does Barry ever tell someone still inside it what is coming? He cut
+      "— not yet" from a generated line, and the essay makes its claim about
+      his own past ("it wasn't a breakdown. It was a beginning.") rather than
+      about the reader's future. That may be a rule about not forecasting, or
+      it may be that hindsight earns a certainty the present tense does not.
+    status: unconfirmed — awaiting Barry
