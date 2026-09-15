@@ -21,8 +21,8 @@ Implements the [Phase 1 roadmap milestones](../docs/06-roadmap.md#61-phase-1-fou
   on its own.
 - **Observed voice:** [`voice_samples.yaml`](./voice_samples.yaml) carries
   samples of the brand's *actual* writing — sentences from the canonical essay,
-  and pairs showing a generated line beside the author's rewrite of it — plus
-  the rules those samples earn. It is injected into the same system prompt,
+  five unedited spoken transcripts, and pairs showing a generated line beside
+  the author's rewrite of it — plus the rules those samples earn. It is injected into the same system prompt,
   after the Constitution and closest to the task.
 
   The two files do different jobs. The Constitution **describes** the voice;

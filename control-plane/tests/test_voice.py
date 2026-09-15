@@ -16,7 +16,7 @@ from app.voice import VoiceSamples
 
 def test_the_shipped_samples_carry_the_corrections_barry_made():
     v = VoiceSamples.load()
-    assert v.version.startswith("1.")
+    assert v.version.startswith("2.")
 
     rewrites = {r["generated"]: r["barry"] for r in v.rewrites}
     chopped = "It's not a breakdown. It's not a breakthrough either — not yet."
@@ -26,6 +26,49 @@ def test_the_shipped_samples_carry_the_corrections_barry_made():
     rules = " ".join(o["rule"] for o in v.observations).lower()
     assert "staccato" in rules and "punctuation, not the register" in rules
     assert "must name its place" in rules
+
+
+def test_the_spoken_answers_ship_verbatim():
+    """Speech is the rawest sample there is; a tidied transcript is not evidence."""
+    spoken = {a["question"]: a["text"] for a in VoiceSamples.load().spoken}
+    assert len(spoken) == 5
+
+    job_site = next(t for q, t in spoken.items() if "job site" in q)
+    # The regional double negative and the repeated admission both survive.
+    assert "I can't hardly find the words" in job_site
+    assert job_site.count("words") >= 3, "not having words for it is the point"
+    assert "Uh," in job_site, "filler is kept in the file, not tidied away"
+
+    irritated = next(t for q, t in spoken.items() if "grateful" in q)
+    assert irritated.endswith("Let's see you be grateful.")
+
+
+def test_the_rules_the_spoken_answers_earned():
+    rules = " ".join(o["rule"] for o in VoiceSamples.load().observations).lower()
+    assert "do not write him articulate" in rules
+    assert "losing my mind" in rules, "his own words for the fear are allowed"
+    assert "beautiful" in rules, "his word for the far side"
+    assert "throws the question back" in rules, "the irritated register"
+
+
+def test_the_forecasting_question_is_recorded_as_resolved_and_wrong():
+    """The inference was wrong in the direction that would have chilled the voice.
+
+    Keeping the correction in the file is what stops it being re-derived from
+    the same deleted phrase later.
+    """
+    import yaml
+
+    from app.voice import DEFAULT_PATH
+
+    raw = yaml.safe_load(DEFAULT_PATH.read_text(encoding="utf-8"))
+    resolved = raw["resolved_questions"]
+    assert any("beautiful" in entry["answer"] for entry in resolved)
+
+    # And it is not in the prompt, either as a question or as a correction.
+    prompt = VoiceSamples.load().prompt_section()
+    for entry in resolved:
+        assert entry["resolved_by"] not in prompt
 
 
 def test_every_shipped_rule_cites_its_evidence():
@@ -57,7 +100,9 @@ def test_samples_reach_the_system_prompt_and_outrank_the_description():
     # A sample, a correction pair, and the instruction on which wins.
     assert "That's the hallway. I've stood in it." in prompt
     assert "It's not a breakdown and it's not a breakthrough." in prompt
+    assert "But wherever you're going is beautiful." in prompt
     assert "follow the sample" in prompt.lower()
+    assert "not the filler" in prompt, "transcripts must not be copied wholesale"
 
     # The described voice is still there — samples add to it, they don't replace it.
     assert "clarifies, doesn't motivate" in prompt.lower()

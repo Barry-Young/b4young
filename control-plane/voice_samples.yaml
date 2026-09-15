@@ -9,6 +9,7 @@
 # PROVENANCE. Every sample here is Barry's own writing:
 #   * 04-content/the-hallway.md — the canonical essay (LOCKED)
 #   * rewrites Barry made of three generated lines, 2026-09-15
+#   * five spoken answers, dictated unedited, 2026-09-15
 # Nothing in this file is drafted, improved or invented. Do not add a rule
 # that no sample below supports, and do not edit a sample to read better —
 # an edited sample is no longer evidence.
@@ -16,7 +17,7 @@
 # Capitalisation of the rewrites is normalised (they were typed quickly on a
 # phone); the words and the punctuation between them are untouched.
 
-version: "1.0.0"
+version: "2.0.0"
 
 # ---------------------------------------------------------------------------
 # Samples: how the sentences actually go.
@@ -58,6 +59,75 @@ samples:
     text: >-
       I don't promise to tell you what it all means. I promise to help you see
       what's actually there, and where the solid ground is.
+
+# ---------------------------------------------------------------------------
+# Spoken, unedited. Dictated answers to five questions — the rawest sample
+# available, because speech skips the self-editing that writing does.
+#
+# TAKE the vocabulary, the admissions, the way a thought arrives and gets
+# corrected mid-sentence. DO NOT reproduce the filler ("uh"), the stutters, or
+# the false starts in a finished script; they are how he talks, not how the
+# work reads. The transcripts are kept verbatim anyway, because a tidied
+# transcript is no longer evidence.
+# ---------------------------------------------------------------------------
+spoken:
+  - question: Tell me what happened, the way you'd tell a guy on a break at a job site.
+    shows: >-
+      He does not have words for it and says so, three times, before saying
+      anything else. Not having the words is the most honest thing in the
+      answer — drafts that sound articulate about this are already wrong.
+    text: >-
+      It's hard to find words to describe what happened to me. I can't hardly
+      find the words. I can't go back to doing what I used to do. I'm no longer
+      who I used to be. I don't know. It's it's like I'm caught in between. I
+      can't go back. And I don't know where I'm going. Uh, mystical like things.
+      Uh, ears ringing. Repeating numbers. Uh, like a third eye awakening. I
+      don't really have the words. So I'm learning everything I can. And it's
+      like I got this push to go on to do something, but I don't know what. It's
+      like I found myself, the person I left a long time ago, and abandoned, I
+      run into him. Yeah, I'm realizing the person I actually am, I forgot who
+      I am.
+
+  - question: Three in the morning. What was actually going through your head.
+    shows: >-
+      Questions, not statements. He considered a doctor. The fear is specific
+      and practical, not poetic.
+    text: >-
+      Three in the morning. Am I going crazy? What's going on? Do I need to go
+      get checked out? A doctor's visit. The things that's going on. I don't
+      know. What's going on? I don't even know who I am. But things are
+      happening. Just falling in my lap. And it's pointing in one direction.
+      And that's where I need to go. But I don't know what to do.
+
+  - question: Someone says "just be grateful, it could be worse." What do you want to say back?
+    shows: >-
+      The irritated register, and the only sample of it. Short. Questions
+      thrown straight back. Contractions. The hurt underneath is about not
+      being believed, not about being misunderstood. Ends on a challenge.
+    text: >-
+      What do you mean it could be worse? It's pretty bad. Be grateful of what?
+      Losing my mind? Nobody's gonna believe me. People are gonna think I'm
+      crazy. Nobody understands. Let's see you be grateful.
+
+  - question: What do you wish somebody had told you in month two?
+    shows: >-
+      He does forecast, and warmly. "Beautiful" is his word for the far side of
+      it, and it appears nowhere in the Constitution. This is the reassuring
+      register — the only place he speaks with certainty about someone else's
+      future.
+    text: >-
+      This is all part of a process, an awakening. You can't go back. But
+      wherever you're going is beautiful. And this is just for you.
+
+  - question: Explain what the hallway is to somebody who's never heard the word used that way.
+    shows: >-
+      Spoken, he calls it a breakdown and keeps going. The written essay says
+      it "wasn't a breakdown. It was a beginning." Both are his. See
+      open_questions.
+    text: >-
+      The hallway. It's the realization that maybe I'm losing my mind. It's a
+      breakdown, but it's coming to the realization that change is coming, and
+      it's beautiful.
 
 # ---------------------------------------------------------------------------
 # Rewrites: lines this system generated, and what Barry changed them to.
@@ -109,15 +179,80 @@ observations:
       or experiencing", while the essay reads "If you're standing in that
       hallway right now".
 
+  - rule: >-
+      Do not write him articulate about the awakening itself. Not having words
+      for it is the truest thing he says about it, and he says it plainly and
+      more than once. A draft that explains the experience fluently has already
+      lost him. "I don't know" is in voice.
+    evidence: >-
+      Spoken answer 1 says it three times in one answer — "It's hard to find
+      words", "I can't hardly find the words", "I don't really have the words"
+      — and answer 2 is almost entirely questions.
+
+  - rule: >-
+      "Losing my mind" and "going crazy" are his own words for the fear, and
+      are allowed. They are not the clinical vocabulary the Constitution bans:
+      that list exists to stop the brand diagnosing a reader (trauma, anxiety,
+      symptoms, treatment). Naming the fear the way he named it is the
+      opposite of diagnosing it.
+    evidence: >-
+      Three of five spoken answers use it — "Am I going crazy?", "Be grateful
+      of what? Losing my mind?", "maybe I'm losing my mind" — and the essay
+      reads "I didn't know if I was losing my mind or what."
+
+  - rule: >-
+      He does say what is coming, and he says it warmly. "Beautiful" is his
+      word for the far side of it. Use it where it is earned; do not reach for
+      a mystical or motivational substitute, and do not promise what the thing
+      will MEAN — the canon line still holds.
+    evidence: >-
+      "But wherever you're going is beautiful. And this is just for you."
+      (answer 4), and "change is coming, and it's beautiful" (answer 5).
+
+  - rule: >-
+      Irritated, he goes short and throws the question back. This is where
+      staccato genuinely belongs. The hurt underneath is about not being
+      believed rather than not being understood — write the disbelief, not
+      generic loneliness.
+    evidence: >-
+      "Be grateful of what? Losing my mind? Nobody's gonna believe me. People
+      are gonna think I'm crazy. Nobody understands. Let's see you be
+      grateful."
+
+  - rule: >-
+      Speech markers carry over into voiceover: contractions, "gonna", the
+      occasional "can't hardly", sentences opening with And or But. Do not
+      correct these into standard written English — they are the sound of him.
+      Filler ("uh") and stutters are not: those belong to the recording, not
+      the writing.
+    evidence: >-
+      "I can't hardly find the words", "Nobody's gonna believe me", "And it's
+      pointing in one direction. And that's where I need to go. But I don't
+      know what to do."
+
 # ---------------------------------------------------------------------------
 # Not yet rules. Recorded so they are not lost, and deliberately not injected:
 # one deleted phrase is not enough to steer on.
 # ---------------------------------------------------------------------------
 open_questions:
   - question: >-
-      Does Barry ever tell someone still inside it what is coming? He cut
-      "— not yet" from a generated line, and the essay makes its claim about
-      his own past ("it wasn't a breakdown. It was a beginning.") rather than
-      about the reader's future. That may be a rule about not forecasting, or
-      it may be that hindsight earns a certainty the present tense does not.
+      Is it a breakdown or isn't it? Spoken, he says it is — "It's a breakdown,
+      but it's coming to the realization that change is coming, and it's
+      beautiful." Written, the essay says it "wasn't a breakdown. It was a
+      beginning." Both are his, and the difference may be audience: conceding
+      the word to someone living it, refusing it in a finished piece. Until
+      Barry says, do not have the brand flatly deny the word to someone in the
+      middle of it; "it's a breakdown, and" is closer to him than "it's not a
+      breakdown".
     status: unconfirmed — awaiting Barry
+
+resolved_questions:
+  - question: >-
+      Does Barry ever tell someone still inside it what is coming? Inferred
+      from his cutting "— not yet" off a generated line.
+    answer: >-
+      Yes, and warmly — "wherever you're going is beautiful". The deletion was
+      him removing a hedge, not refusing to forecast. Recorded because the
+      inference was wrong in the direction that would have made the writing
+      colder, and shipping it as a rule would have done real damage.
+    resolved_by: spoken answer 4, 2026-09-15

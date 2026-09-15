@@ -24,11 +24,13 @@ class VoiceSamples:
     def __init__(self, data: dict) -> None:
         self.version: str = data.get("version", "0.0.0")
         self.samples: list[dict] = data.get("samples") or []
+        self.spoken: list[dict] = data.get("spoken") or []
         self.rewrites: list[dict] = data.get("rewrites") or []
         self.observations: list[dict] = data.get("observations") or []
-        # open_questions are deliberately not loaded into the prompt: they are
-        # inferences no sample yet supports, kept in the file so they are not
-        # lost, not so they steer the model.
+        # open_questions and resolved_questions are deliberately not loaded:
+        # the first are inferences no sample yet supports, the second a record
+        # of a wrong one. Both belong in the file so they are not lost, not in
+        # the prompt where they would steer the model.
 
     @classmethod
     def load(cls, path: Path = DEFAULT_PATH) -> "VoiceSamples":
@@ -38,7 +40,7 @@ class VoiceSamples:
             return cls(yaml.safe_load(fh) or {})
 
     def __bool__(self) -> bool:
-        return bool(self.samples or self.rewrites or self.observations)
+        return bool(self.samples or self.spoken or self.rewrites or self.observations)
 
     def prompt_section(self) -> str:
         """The samples as prompt text, or empty when none are configured."""
@@ -60,6 +62,20 @@ class VoiceSamples:
                 continue
             shows = _clean(sample.get("shows"))
             parts.append(f'Sample — {shows}\n  "{text}"' if shows else f'Sample:\n  "{text}"')
+
+        for answer in self.spoken:
+            text = _clean(answer.get("text"))
+            if not text:
+                continue
+            lines = ["Spoken, unedited — take the words and the moves, not the filler:"]
+            question = _clean(answer.get("question"))
+            if question:
+                lines.append(f"  asked: {question}")
+            lines.append(f'  said:  "{text}"')
+            shows = _clean(answer.get("shows"))
+            if shows:
+                lines.append(f"  what this shows: {shows}")
+            parts.append("\n".join(lines))
 
         for rewrite in self.rewrites:
             generated, author = _clean(rewrite.get("generated")), _clean(rewrite.get("barry"))
