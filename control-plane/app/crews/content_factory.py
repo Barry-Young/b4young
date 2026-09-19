@@ -15,7 +15,7 @@ import re
 from ..constitution import BrandConstitution
 from ..models import CrewName
 from ..vault import Vault
-from .base import Agent, Crew, Task
+from .base import Agent, CheckResult, Crew, Task
 from .blackboard import Blackboard, EventBus
 
 DISPLAY_NAME = "Content Factory"
@@ -24,11 +24,11 @@ DISPLAY_NAME = "Content Factory"
 # the directive carries one, else fall back to this default. Without it the
 # Strategist invents a platform (it has picked Substack long-form) while the
 # Scriptwriter writes short-form video, and the two artifacts contradict.
-DEFAULT_FORMAT = "Instagram Reel, 45 seconds"
+DEFAULT_FORMAT = "Instagram Reel, 60 seconds"
 
 FORMAT_RULE = (
     "FORMAT. The directive may name one, written as "
-    "`Format: <platform>, <length>` (e.g. `Format: Instagram Reel, 45 seconds`). "
+    "`Format: <platform>, <length>` (e.g. `Format: Instagram Reel, 30 seconds`). "
     f"If it does, use exactly that. If it does not, use {DEFAULT_FORMAT}. "
     "Never substitute a different platform or length than the one in force."
 )
@@ -86,28 +86,40 @@ def spoken_words(output: str) -> list[str]:
     return words
 
 
-def check_script_length(output: str, directive: str) -> list[str]:
-    """Flag a script that overruns its budget, or that can't be measured."""
+def check_script_length(output: str, directive: str) -> CheckResult:
+    """Flag a script that overruns its budget, or that can't be measured.
+
+    `distance` is the count of words over budget, so a rewrite that cuts 185
+    words to 140 is recognised as the better draft even though both overrun.
+    """
     seconds = parse_length_seconds(directive)
     if seconds is None:
-        return []
+        return CheckResult()
 
     budget = seconds * SPOKEN_WORDS_PER_SECOND
     words = spoken_words(output)
     if not words:
-        return [
-            f"spoken lines are not marked with `{VO_PREFIX}`, so the "
-            f"{seconds}-second length budget could not be checked"
-        ]
+        # Unmeasurable, so worse than any measurable draft: a rewrite that can
+        # be counted at all should win, even if it also overruns.
+        return CheckResult(
+            flags=[
+                f"spoken lines are not marked with `{VO_PREFIX}`, so the "
+                f"{seconds}-second length budget could not be checked"
+            ],
+            distance=float("inf"),
+        )
 
     count = len(words)
     if count > budget * LENGTH_TOLERANCE:
         over = round(count / SPOKEN_WORDS_PER_SECOND)
-        return [
-            f"script overruns its length: {count} spoken words is about "
-            f"{over} seconds, against a {seconds}-second budget of ~{budget} words"
-        ]
-    return []
+        return CheckResult(
+            flags=[
+                f"script overruns its length: {count} spoken words is about "
+                f"{over} seconds, against a {seconds}-second budget of ~{budget} words"
+            ],
+            distance=count - budget,
+        )
+    return CheckResult()
 
 # The account is faceless (04-content/content-engine.md): animated on-screen
 # text over stock B-roll, assembled in CapCut. Nothing told the Scriptwriter
@@ -204,13 +216,15 @@ def build(
                 f"{FORMAT_RULE}\n"
                 "LENGTH IS A HARD CONSTRAINT, not a suggestion. Delivery is "
                 f"unhurried — about {SPOKEN_WORDS_PER_SECOND} spoken words per "
-                "second — so a 45-second video is roughly 90 spoken words in "
+                "second — so a 60-second video is roughly 120 spoken words in "
                 "total, across hook, body, steps and close combined. Work out "
                 "the budget for the length in force, count the spoken words you "
                 "have written, and cut until you are inside it. A script that "
                 "covers every section but overruns the length is a failed "
                 "script: cut the number of steps or the depth of the reframe "
-                "before you exceed it.\n"
+                "before you exceed it. An overrunning draft is handed back "
+                "to you to write again, so write to the budget the first "
+                "time.\n"
                 "On-screen text, production notes, the caption and the hashtags "
                 "are read, not spoken, and do not count toward the budget.\n"
                 f"Put every spoken line on its own line beginning with "
@@ -238,6 +252,7 @@ def build(
                 ),
                 artifact_type="script",
                 output_check=check_script_length,
+                revise_once=True,
             ),
             checkpoint=True,  # HITL: approve the script before voiceover
         ),

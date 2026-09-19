@@ -123,7 +123,7 @@
       <h2>Crews (Data Plane)</h2>
       <p class="meta">Pin the output with <code>| Format: &lt;platform&gt;, &lt;length&gt;</code> and
       <code>| Track: A</code> or <code>| Track: B</code> — e.g.
-      <code>Overcoming procrastination | Format: Instagram Reel, 45 seconds | Track: A</code>.
+      <code>Overcoming procrastination | Format: Instagram Reel, 30 seconds | Track: A</code>.
       Content Factory defaults to <code>{{ default_content_format }}</code> and
       <strong>Track {{ default_content_track }}</strong> (the Hallway — no paid CTA) when none is given.</p>
       <table>
@@ -219,7 +219,7 @@
               {% for f in e.governance_flags %}<div class="flag">⚠ {{ f }}</div>{% endfor %}
               {% if e.output_text %}
               <details class="artifact"{% if e.status.value == "AWAITING_APPROVAL" %} open{% endif %}>
-                <summary>Read the {{ e.artifact_type.replace("_", " ") }}{% if e.is_stub %} (placeholder text — no API key){% endif %}</summary>
+                <summary>Read the {{ e.artifact_type.replace("_", " ") }}{% if e.is_stub %} (placeholder text — no API key){% endif %}{% if e.was_revised %} · rewritten once to meet its length{% endif %}</summary>
                 <pre>{{ e.output_text }}</pre>
               </details>
               {% endif %}

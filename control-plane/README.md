@@ -95,8 +95,8 @@ The Control Plane can deploy and run **agent crews**
   - **Content Factory** — Executive Producer + Content Strategist + Scriptwriter
     + Voice Artist + Video Producer. Pin the output in the directive with two
     optional clauses:
-    `Overcoming procrastination | Format: Instagram Reel, 45 seconds | Track: A`.
-    - `Format: <platform>, <length>` — defaults to Instagram Reel, 45 seconds.
+    `Overcoming procrastination | Format: Instagram Reel, 30 seconds | Track: A`.
+    - `Format: <platform>, <length>` — defaults to Instagram Reel, 60 seconds.
       Both the Strategist and the Scriptwriter are given the same rule, so they
       can't produce contradictory artifacts, and the Scriptwriter treats the
       length as a hard spoken-word budget (~2 words per second) rather than
@@ -114,12 +114,16 @@ The Control Plane can deploy and run **agent crews**
     voiceover and stock-findable B-roll rather than shots of a presenter.
 
     The Scriptwriter marks every spoken line with `VO:`, and the crew **counts
-    those words itself** and flags a script that overruns its length. Models
-    cannot count their own output — one 45-second script reported 89 spoken
-    words and ran to about 120 — so the budget is checked rather than trusted.
-    The flag appears on the Blackboard entry beside the script, next to any
-    Brand Constitution violations. Artifact checks are skipped on stub output,
-    which is placeholder text rather than a script.
+    those words itself** rather than trusting the model's own arithmetic — one
+    45-second script reported 89 spoken words and ran to about 120. An
+    overrunning draft is **handed back once**, told the real count and by how
+    much it missed, and the closer of the two drafts is kept: a rewrite can
+    overshoot the other way, and flag count alone cannot tell 185 words from
+    140. If it still overruns, the flag appears on the Blackboard entry beside
+    the script, next to any Brand Constitution violations, and `revised` on the
+    entry records whether a second attempt was taken. Artifact checks — and so
+    the revision — are skipped on stub output, which is placeholder text rather
+    than a script.
   - **Marketing & Distribution** — Campaign Manager + Social Media Manager +
     Affiliate Program Manager + Engagement Bot.
   - **Automated Service Delivery** — Product Manager + Webinar Host +
