@@ -81,9 +81,28 @@ LENGTH_TOLERANCE = 1.1
 MAX_WORDS_PER_VO_LINE = 13
 SECONDS_PER_VO_LINE = 8
 
+# MEASURED OUTCOME, so this is not tightened by mistake later. On the first
+# live run under these caps the Scriptwriter wrote 13 spoken lines against a
+# cap of 11 — and the script came in under budget with no flag, because the
+# lines were short. The per-line cap carried it.
+#
+# That is a pass, not a near miss. What is being bought here is a script that
+# fits its runtime and still sounds like the brand; the line count is a means
+# to that, not the goal. Pressing the model from 13 lines to exactly 11 buys
+# nothing measurable and spends prompt weight on obedience rather than on
+# voice, which is the expensive thing and took the longest to get right.
+#
+# The real budget is still counted on every run, so genuine drift — 18 lines,
+# 20 — comes back as a flag on its own. Leave the caps where they are until a
+# measurement says otherwise.
+
 
 def max_vo_lines(seconds: int) -> int:
-    """How many spoken lines a piece of this length gets. At least one."""
+    """How many spoken lines a piece of this length gets. At least one.
+
+    Treated as a target by the model rather than a hard ceiling — see the note
+    above. The hard limit is the word count, which the app measures itself.
+    """
     return max(1, math.floor(seconds / SECONDS_PER_VO_LINE))
 
 _LENGTH_PATTERN = re.compile(
