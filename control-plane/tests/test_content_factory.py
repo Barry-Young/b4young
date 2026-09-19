@@ -174,6 +174,26 @@ def test_the_line_caps_leave_room_for_the_measured_overshoot():
         assert capped > real_budget * 0.6, seconds
 
 
+def test_a_script_over_the_line_cap_but_inside_the_budget_is_not_flagged():
+    """The first live run under these caps: 13 spoken lines against a cap of 11.
+
+    It passed, because the lines were short — the per-line cap carried it, and
+    the script fit its runtime and still sounded right. The line count is a
+    means to a script that fits, not the thing being enforced, so this stays a
+    pass. Genuine drift is caught by the word count, which is measured.
+    """
+    from app.crews.content_factory import check_script_length, max_vo_lines
+
+    assert max_vo_lines(90) == 11
+    thirteen_short_lines = "\n".join(["VO: " + "word " * 12] * 13)
+
+    assert not check_script_length(thirteen_short_lines, "Topic | Track: B")
+
+    # Drift far enough and the word count catches it on its own.
+    twenty_lines = "\n".join(["VO: " + "word " * 12] * 20)
+    assert check_script_length(twenty_lines, "Topic | Track: B")
+
+
 def test_the_overrun_flag_reports_the_line_count_too():
     # It separates "ignored the line cap" from "obeyed it and the lines ran
     # long" — different defects needing different fixes.

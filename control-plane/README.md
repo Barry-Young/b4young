@@ -124,7 +124,11 @@ The Control Plane can deploy and run **agent crews**
     words in any one spoken line and a cap on how many spoken lines exist, both
     of which it can check one line at a time. Those caps come to ~1.6 words per
     second against a real budget of 2, and that headroom is what absorbs the
-    overshoot. An
+    overshoot. The line cap is a target rather than a ceiling: the first live
+    run under it wrote 13 lines against a cap of 11 and came in **under budget
+    with no flag**, because the lines were short. That is a pass — the line
+    count is a means to a script that fits its runtime, and the hard limit is
+    the word count, which the app measures. An
     overrunning draft is **handed back once**, told the real count and by how
     much it missed, and the closer of the two drafts is kept: a rewrite can
     overshoot the other way, and flag count alone cannot tell 185 words from
