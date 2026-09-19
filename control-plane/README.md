@@ -96,7 +96,10 @@ The Control Plane can deploy and run **agent crews**
     + Voice Artist + Video Producer. Pin the output in the directive with two
     optional clauses:
     `Overcoming procrastination | Format: Instagram Reel, 30 seconds | Track: A`.
-    - `Format: <platform>, <length>` — defaults to Instagram Reel, 60 seconds.
+    - `Format: <platform>, <length>` — defaults to Instagram Reel, 90 seconds,
+      which is where the writing lands: briefed at 45 seconds it produced 185
+      spoken words, and rebriefed at 60 with a revision pass it produced 176.
+      A shorter piece is a different structure, not this one cut.
       Both the Strategist and the Scriptwriter are given the same rule, so they
       can't produce contradictory artifacts, and the Scriptwriter treats the
       length as a hard spoken-word budget (~2 words per second) rather than
@@ -124,6 +127,12 @@ The Control Plane can deploy and run **agent crews**
     entry records whether a second attempt was taken. Artifact checks — and so
     the revision — are skipped on stub output, which is placeholder text rather
     than a script.
+
+    The revision pass is a net for a runaway — the three-minute draft the first
+    live run produced — not a way to shave a fifth off a good script. Two
+    consecutive runs landed at ~88 seconds of speech whatever target they were
+    given, which is why the default moved to match the writing rather than the
+    other way around.
   - **Marketing & Distribution** — Campaign Manager + Social Media Manager +
     Affiliate Program Manager + Engagement Bot.
   - **Automated Service Delivery** — Product Manager + Webinar Host +

@@ -24,7 +24,15 @@ DISPLAY_NAME = "Content Factory"
 # the directive carries one, else fall back to this default. Without it the
 # Strategist invents a platform (it has picked Substack long-form) while the
 # Scriptwriter writes short-form video, and the two artifacts contradict.
-DEFAULT_FORMAT = "Instagram Reel, 60 seconds"
+#
+# The length is 90 seconds because that is where the writing actually lands.
+# Briefed at 45 it produced 185 spoken words; rebriefed at 60, and handed back
+# once to cut, it produced 176. The model counts accurately — the app verifies
+# it — so this is not a failure to obey. It is what this structure costs in
+# this voice: hook, the difficulty, the turn, one step, the door. Two targets
+# were moved to fit a number neither run wanted. A genuinely short piece is a
+# different shape, not this one trimmed.
+DEFAULT_FORMAT = "Instagram Reel, 90 seconds"
 
 FORMAT_RULE = (
     "FORMAT. The directive may name one, written as "
@@ -216,7 +224,7 @@ def build(
                 f"{FORMAT_RULE}\n"
                 "LENGTH IS A HARD CONSTRAINT, not a suggestion. Delivery is "
                 f"unhurried — about {SPOKEN_WORDS_PER_SECOND} spoken words per "
-                "second — so a 60-second video is roughly 120 spoken words in "
+                "second — so a 90-second video is roughly 180 spoken words in "
                 "total, across hook, body, steps and close combined. Work out "
                 "the budget for the length in force, count the spoken words you "
                 "have written, and cut until you are inside it. A script that "

@@ -133,7 +133,7 @@ def test_scriptwriter_gets_a_hard_spoken_word_budget():
     # run produced ~3 minutes of speech for a 45-second brief.
     description = _content_factory_tasks()["Scriptwriter"]
     assert "LENGTH IS A HARD CONSTRAINT" in description
-    assert "120 spoken words" in description
+    assert "180 spoken words" in description
     assert "handed back" in description, "the budget is enforced, not just stated"
     assert "do not count toward the budget" in description
 
@@ -201,7 +201,7 @@ def test_length_is_read_from_the_directive_and_falls_back_to_the_default():
     assert parse_length_seconds("Topic | Format: YouTube Short, 1 minute") == 60
     assert parse_length_seconds("Topic | Format: TikTok, 90 secs") == 90
     # No Format clause: the crew's own default is what the script is judged by.
-    assert parse_length_seconds("Regaining ground") == 60
+    assert parse_length_seconds("Regaining ground") == 90
 
 
 def test_only_marked_lines_count_toward_the_spoken_budget():
@@ -239,6 +239,28 @@ def test_a_script_that_overruns_its_length_is_flagged():
     # Inside the budget, and a shade over it, are both fine.
     assert not check_script_length("\n".join(["VO: word word"] * 40), directive)
     assert not check_script_length("\n".join(["VO: word word"] * 48), directive)
+
+
+def test_the_default_length_matches_what_the_writing_actually_produces():
+    """Two live runs landed at ~88 seconds whatever target they were given.
+
+    Briefed at 45s: 185 spoken words. Rebriefed at 60s and handed back once to
+    cut: 176. The model counts accurately — the app verifies it — so the target
+    was the thing that was wrong, twice. Both of those real results now pass.
+    """
+    from app.crews.content_factory import DEFAULT_FORMAT, check_script_length
+
+    assert "90 seconds" in DEFAULT_FORMAT
+
+    for count in (176, 185):
+        draft = "\n".join(["VO: word"] * count)
+        assert not check_script_length(draft, "Regaining ground"), count
+
+    # A genuine runaway — the three-minute draft from the first live run — is
+    # still caught. The revision pass is a net for that, not a way to shave a
+    # fifth off a script that is already good.
+    runaway = "\n".join(["VO: word"] * 360)
+    assert check_script_length(runaway, "Regaining ground")
 
 
 def test_distance_ranks_two_overrunning_drafts():
