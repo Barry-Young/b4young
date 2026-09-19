@@ -128,14 +128,62 @@ def test_format_rule_names_the_directive_syntax_and_a_default():
     assert DEFAULT_FORMAT in FORMAT_RULE
 
 
-def test_scriptwriter_gets_a_hard_spoken_word_budget():
-    # Without a budget it writes until every section is covered — the first real
-    # run produced ~3 minutes of speech for a 45-second brief.
+def test_scriptwriter_is_given_limits_it_can_check_by_looking():
+    """It cannot total its own words, so it is no longer asked to.
+
+    Measured twice: it reported 89 spoken words having written 120, then 178
+    having written 220 — always low, by about a quarter, while aiming correctly
+    at the number it was given. Per-line and line-count caps are discrete
+    things it can verify one at a time.
+    """
+    from app.crews.content_factory import (
+        MAX_WORDS_PER_VO_LINE,
+        SECONDS_PER_VO_LINE,
+        max_vo_lines,
+    )
+
     description = _content_factory_tasks()["Scriptwriter"]
     assert "LENGTH IS A HARD CONSTRAINT" in description
-    assert "180 spoken words" in description
-    assert "handed back" in description, "the budget is enforced, not just stated"
-    assert "do not count toward the budget" in description
+    assert "DO NOT TOTAL THE WORDS YOURSELF" in description
+    assert "Do not state a word total" in description
+    assert f"{MAX_WORDS_PER_VO_LINE} spoken words in any single" in description
+    assert f"every {SECONDS_PER_VO_LINE} seconds of runtime" in description
+    assert f"{max_vo_lines(90)} lines for a 90-second video" in description
+    assert "handed back" in description, "the limits are enforced, not just stated"
+    assert "not subject to either limit" in description, "captions are not spoken"
+
+
+def test_the_line_caps_leave_room_for_the_measured_overshoot():
+    """Obeying both caps has to land inside the real budget, not on top of it.
+
+    The caps come to ~1.6 words per second against a real budget of 2. That
+    headroom is the whole point: it is what absorbs the quarter the
+    Scriptwriter has overshot by on every measured run.
+    """
+    from app.crews.content_factory import (
+        MAX_WORDS_PER_VO_LINE,
+        SPOKEN_WORDS_PER_SECOND,
+        max_vo_lines,
+    )
+
+    for seconds in (30, 45, 60, 90):
+        capped = max_vo_lines(seconds) * MAX_WORDS_PER_VO_LINE
+        real_budget = seconds * SPOKEN_WORDS_PER_SECOND
+        assert capped < real_budget, seconds
+        # And not so much headroom that the piece comes out half length.
+        assert capped > real_budget * 0.6, seconds
+
+
+def test_the_overrun_flag_reports_the_line_count_too():
+    # It separates "ignored the line cap" from "obeyed it and the lines ran
+    # long" — different defects needing different fixes.
+    from app.crews.content_factory import check_script_length, max_vo_lines
+
+    draft = "\n".join([f"VO: {'word ' * 20}"] * 15)
+    flag = check_script_length(draft, "Topic | Format: Reel, 90 seconds").flags[0]
+
+    assert "15 spoken lines" in flag
+    assert f"cap of {max_vo_lines(90)}" in flag
 
 
 # --------------------------------------------------------------------------- #

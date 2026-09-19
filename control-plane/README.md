@@ -117,8 +117,14 @@ The Control Plane can deploy and run **agent crews**
     voiceover and stock-findable B-roll rather than shots of a presenter.
 
     The Scriptwriter marks every spoken line with `VO:`, and the crew **counts
-    those words itself** rather than trusting the model's own arithmetic — one
-    45-second script reported 89 spoken words and ran to about 120. An
+    those words itself** rather than trusting the model's own arithmetic. It
+    reported 89 spoken words having written 120, then 178 having written 220 —
+    always low, by about a quarter, while aiming correctly at the number it was
+    given. So it is **no longer asked to total anything**: it gets a cap on the
+    words in any one spoken line and a cap on how many spoken lines exist, both
+    of which it can check one line at a time. Those caps come to ~1.6 words per
+    second against a real budget of 2, and that headroom is what absorbs the
+    overshoot. An
     overrunning draft is **handed back once**, told the real count and by how
     much it missed, and the closer of the two drafts is kept: a rewrite can
     overshoot the other way, and flag count alone cannot tell 185 words from
