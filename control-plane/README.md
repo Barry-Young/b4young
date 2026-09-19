@@ -12,13 +12,21 @@ Implements the [Phase 1 roadmap milestones](../docs/06-roadmap.md#61-phase-1-fou
   Backstory, Tools, Model — via API or the web UI.
 - **Secure Key Vault:** hold API keys in memory; secrets are never persisted or
   returned (only a masked preview). Seedable from `BYI_KEY_<NAME>` env vars.
-- **Brand Constitution v2.0:** [`brand_constitution.yaml`](./brand_constitution.yaml)
+- **Brand Constitution v2.1:** [`brand_constitution.yaml`](./brand_constitution.yaml)
   carries the brand's voice, audience, structural principles, preferred/banned
   terms, and guardrails. It is injected into every agent run and enforced
   (banned-term flagging) on output. **It is a faithful encoding of the brand's
   own `01-identity/brand-constitution.md`, not an independent draft** — when
   that document changes, change this file to match, and don't evolve this file
   on its own.
+
+  A banned term may carry `unless`, a pattern that passes the term when it
+  appears in the same sentence. The clinical terms exist to stop the brand
+  diagnosing a *reader* — a legal line — and that is a ban on an act, not on
+  letters: the canonical essay uses "diagnosed" of a house being surveyed, so
+  `diagnos` passes in the trade sense and flags in the clinical one. The
+  narrowing is per sentence and heuristic, and every flag is advisory — it is
+  recorded on the artifact and never blocks a run.
 - **Observed voice:** [`voice_samples.yaml`](./voice_samples.yaml) carries
   samples of the brand's *actual* writing — sentences from the canonical essay,
   five unedited spoken transcripts, and pairs showing a generated line beside

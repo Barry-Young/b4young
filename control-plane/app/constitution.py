@@ -13,6 +13,7 @@ read as an impression of the voice rather than the voice.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import yaml
@@ -21,6 +22,40 @@ from .voice import VoiceSamples
 
 DEFAULT_PATH = Path(__file__).resolve().parent.parent / "brand_constitution.yaml"
 
+# Flags are raised per sentence, so a term's context is the sentence holding it.
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
+
+
+class BannedTerm:
+    """A banned term, optionally narrowed to the sense that is actually banned.
+
+    The clinical terms exist to stop the brand diagnosing a reader — a legal
+    line, not a style choice. That is a ban on an act, not on letters: Barry's
+    own essay uses "diagnosed" of a house he was surveying. An entry may carry
+    `unless`, a pattern that passes the use when it appears in the same
+    sentence. Heuristic by nature, and the flag is advisory — it never blocks.
+    """
+
+    def __init__(self, spec: object) -> None:
+        if isinstance(spec, dict):
+            self.term = str(spec.get("term", "")).strip()
+            unless = str(spec.get("unless", "")).strip()
+            self.unless = re.compile(unless, re.IGNORECASE) if unless else None
+            self.note = str(spec.get("note", "")).strip()
+        else:
+            self.term = str(spec).strip()
+            self.unless = None
+            self.note = ""
+
+    def offending_sentences(self, text: str) -> list[str]:
+        needle = self.term.lower()
+        if not needle:
+            return []
+        hits = [s for s in _SENTENCE_SPLIT.split(text) if needle in s.lower()]
+        if self.unless is not None:
+            hits = [s for s in hits if not self.unless.search(s)]
+        return hits
+
 
 class BrandConstitution:
     def __init__(self, data: dict, voice_samples: VoiceSamples | None = None) -> None:
@@ -28,7 +63,9 @@ class BrandConstitution:
         self.voice: dict = data.get("voice", {})
         self.principles: list[str] = data.get("principles", [])
         self.preferred_terms: list[str] = data.get("preferred_terms", [])
-        self.banned_terms: list[str] = data.get("banned_terms", [])
+        self._banned = [BannedTerm(spec) for spec in data.get("banned_terms", []) or []]
+        # The plain strings, for display and for the prompt.
+        self.banned_terms: list[str] = [b.term for b in self._banned if b.term]
         self.guardrails: list[str] = data.get("guardrails", [])
         # Injected rather than loaded here, so a constitution built in a test
         # carries no samples unless the test asks for them.
@@ -61,6 +98,21 @@ class BrandConstitution:
             parts.append("Preferred terms: " + ", ".join(self.preferred_terms))
         if self.banned_terms:
             parts.append("Never use these banned terms: " + ", ".join(self.banned_terms))
+            # Observed twice in live runs: an agent reaches for a banned term in
+            # order to rule it out, which still puts the word in front of the
+            # reader and still trips the check.
+            parts.append(
+                "Do not reach for a banned term in order to deny it — writing "
+                "\"it's not a diagnosis\" still puts the word in the reader's "
+                "head. Say what a thing is, not what it isn't."
+            )
+            for banned in self._banned:
+                if banned.unless is not None:
+                    parts.append(
+                        f"On '{banned.term}': banned in the clinical sense only — "
+                        "applied to a person. The trade sense, diagnosing a house "
+                        "or a room, is the brand's own and is allowed."
+                    )
         for guard in self.guardrails:
             parts.append(f"Constraint: {guard}")
         parts.append(f"(Brand Constitution v{self.version})")
@@ -74,5 +126,8 @@ class BrandConstitution:
 
     def check_output(self, text: str) -> list[str]:
         """Return a list of governance flags for an output (empty == clean)."""
-        lowered = text.lower()
-        return [f"banned term used: '{term}'" for term in self.banned_terms if term.lower() in lowered]
+        return [
+            f"banned term used: '{banned.term}'"
+            for banned in self._banned
+            if banned.offending_sentences(text)
+        ]
