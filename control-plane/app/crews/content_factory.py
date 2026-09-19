@@ -10,6 +10,7 @@ for in Phase 3 of the roadmap (docs/06-roadmap.md, 6.3).
 
 from __future__ import annotations
 
+import math
 import re
 
 from ..constitution import BrandConstitution
@@ -58,6 +59,33 @@ VO_PREFIX = "VO:"
 # is the defect this catches.
 LENGTH_TOLERANCE = 1.1
 
+# The Scriptwriter cannot count its own output, and the misses run one way.
+# Measured twice against the app's count: it reported 89 spoken words having
+# written about 120, then reported 178 having written 220 — low by 35% and by
+# 24%. Both times it aimed correctly at the number it was given; both times it
+# was wrong about where it had landed. So neither telling it the real budget
+# nor handing the draft back with the real count can work: it re-aims at the
+# same number and misses the same way. Raising the target only raises the
+# output (60s produced 176, 90s produced 220).
+#
+# It is therefore not asked to total anything. It is given two limits it can
+# check by looking — discrete things it can see, rather than arithmetic over
+# the whole script:
+#
+#   * a cap on the words in any one spoken line
+#   * a cap on how many spoken lines exist, one per N seconds of runtime
+#
+# Together these come to about 1.6 words per second against the real budget of
+# 2, and that headroom is what absorbs the overshoot. The app keeps counting
+# honestly against the real budget, so if the bias moves, the flag says so.
+MAX_WORDS_PER_VO_LINE = 13
+SECONDS_PER_VO_LINE = 8
+
+
+def max_vo_lines(seconds: int) -> int:
+    """How many spoken lines a piece of this length gets. At least one."""
+    return max(1, math.floor(seconds / SECONDS_PER_VO_LINE))
+
 _LENGTH_PATTERN = re.compile(
     r"(\d+(?:\.\d+)?)\s*(seconds?|secs?|s|minutes?|mins?|m)\b", re.IGNORECASE
 )
@@ -86,12 +114,28 @@ def spoken_words(output: str) -> list[str]:
     """
     words: list[str] = []
     for line in output.splitlines():
-        stripped = line.strip().lstrip("*_- ").strip()
-        if not stripped.upper().startswith(VO_PREFIX):
+        spoken = _spoken_part(line)
+        if spoken is None:
             continue
-        spoken = stripped[len(VO_PREFIX) :]
         words.extend(w for w in spoken.split() if _WORD_PATTERN.search(w))
     return words
+
+
+def _spoken_part(line: str) -> str | None:
+    """The words of a marked spoken line, or None if the line is not one."""
+    stripped = line.strip().lstrip("*_- ").strip()
+    if not stripped.upper().startswith(VO_PREFIX):
+        return None
+    return stripped[len(VO_PREFIX) :]
+
+
+def _is_spoken_line(line: str) -> bool:
+    return _spoken_part(line) is not None
+
+
+def spoken_line_count(output: str) -> int:
+    """How many marked spoken lines the script has."""
+    return sum(1 for line in output.splitlines() if _is_spoken_line(line))
 
 
 def check_script_length(output: str, directive: str) -> CheckResult:
@@ -120,10 +164,13 @@ def check_script_length(output: str, directive: str) -> CheckResult:
     count = len(words)
     if count > budget * LENGTH_TOLERANCE:
         over = round(count / SPOKEN_WORDS_PER_SECOND)
+        lines = spoken_line_count(output)
+        allowed = max_vo_lines(seconds)
         return CheckResult(
             flags=[
                 f"script overruns its length: {count} spoken words is about "
-                f"{over} seconds, against a {seconds}-second budget of ~{budget} words"
+                f"{over} seconds, against a {seconds}-second budget of ~{budget} "
+                f"words — {lines} spoken lines, against a cap of {allowed}"
             ],
             distance=count - budget,
         )
@@ -222,27 +269,38 @@ def build(
                 "7. Two alternate hooks to A/B test.\n"
                 "Write spoken lines the way they will be said out loud.\n\n"
                 f"{FORMAT_RULE}\n"
-                "LENGTH IS A HARD CONSTRAINT, not a suggestion. Delivery is "
-                f"unhurried — about {SPOKEN_WORDS_PER_SECOND} spoken words per "
-                "second — so a 90-second video is roughly 180 spoken words in "
-                "total, across hook, body, steps and close combined. Work out "
-                "the budget for the length in force, count the spoken words you "
-                "have written, and cut until you are inside it. A script that "
-                "covers every section but overruns the length is a failed "
-                "script: cut the number of steps or the depth of the reframe "
-                "before you exceed it. An overrunning draft is handed back "
-                "to you to write again, so write to the budget the first "
-                "time.\n"
-                "On-screen text, production notes, the caption and the hashtags "
-                "are read, not spoken, and do not count toward the budget.\n"
                 f"Put every spoken line on its own line beginning with "
                 f"`{VO_PREFIX}` — nothing else on that line, and nothing spoken "
                 "anywhere else. On-screen text, production notes and the caption "
-                f"are never marked `{VO_PREFIX}`. The app counts those lines to "
-                "check the budget, so a script that overruns is flagged whatever "
-                "count you claim.\n"
-                "State the spoken word count and the length you wrote to at the "
-                "top of the package.\n\n"
+                f"are never marked `{VO_PREFIX}`.\n\n"
+                "LENGTH IS A HARD CONSTRAINT, and it is measured rather than "
+                "trusted: the app counts your spoken lines and flags a script "
+                "that runs long.\n"
+                "DO NOT TOTAL THE WORDS YOURSELF. That count has been checked "
+                "against the app's every time, and it has been wrong every "
+                "time, always low, by roughly a quarter — a script reporting "
+                "178 spoken words had written 220. Aiming at a total you "
+                "cannot measure is what has failed, twice, so do not do it.\n"
+                "Work to these two limits instead. Both are things you can "
+                "check by looking, one line at a time:\n"
+                f"  1. No more than {MAX_WORDS_PER_VO_LINE} spoken words in any "
+                f"single `{VO_PREFIX}` line. Count that line, on its own, and "
+                "cut it if it runs over.\n"
+                f"  2. One `{VO_PREFIX}` line for every "
+                f"{SECONDS_PER_VO_LINE} seconds of runtime, rounded down — so "
+                f"{max_vo_lines(90)} lines for a 90-second video, "
+                f"{max_vo_lines(60)} for a 60-second one. Count the lines when "
+                "you are done. If there are too many, cut whole lines: drop "
+                "the weakest beat entirely rather than shortening every line "
+                "into shorthand.\n"
+                "Staying inside both limits is what meeting the length means. "
+                "A script that covers every section but breaks them is a "
+                "failed script, and is handed back to you to write again.\n"
+                "On-screen text, production notes, the caption and the "
+                "hashtags are read, not spoken, and are not subject to either "
+                "limit.\n"
+                f"State the length you wrote to and the number of `{VO_PREFIX}` "
+                "lines at the top of the package. Do not state a word total.\n\n"
                 f"{PRODUCTION_RULE}\n\n"
                 f"{TRACK_RULE}"
             ),
