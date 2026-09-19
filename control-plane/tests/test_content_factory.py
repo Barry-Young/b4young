@@ -133,7 +133,8 @@ def test_scriptwriter_gets_a_hard_spoken_word_budget():
     # run produced ~3 minutes of speech for a 45-second brief.
     description = _content_factory_tasks()["Scriptwriter"]
     assert "LENGTH IS A HARD CONSTRAINT" in description
-    assert "90 spoken words" in description
+    assert "120 spoken words" in description
+    assert "handed back" in description, "the budget is enforced, not just stated"
     assert "do not count toward the budget" in description
 
 
@@ -200,7 +201,7 @@ def test_length_is_read_from_the_directive_and_falls_back_to_the_default():
     assert parse_length_seconds("Topic | Format: YouTube Short, 1 minute") == 60
     assert parse_length_seconds("Topic | Format: TikTok, 90 secs") == 90
     # No Format clause: the crew's own default is what the script is judged by.
-    assert parse_length_seconds("Regaining ground") == 45
+    assert parse_length_seconds("Regaining ground") == 60
 
 
 def test_only_marked_lines_count_toward_the_spoken_budget():
@@ -229,25 +230,41 @@ def test_a_script_that_overruns_its_length_is_flagged():
     directive = "Regaining ground | Format: Instagram Reel, 45 seconds"
     overrun = "\n".join(f"VO: {'word ' * 10}" for _ in range(12))
 
-    flags = check_script_length(overrun, directive)
-    assert len(flags) == 1
-    assert "overruns its length" in flags[0]
-    assert "120 spoken words" in flags[0]
-    assert "45-second budget" in flags[0]
+    result = check_script_length(overrun, directive)
+    assert len(result.flags) == 1
+    assert "overruns its length" in result.flags[0]
+    assert "120 spoken words" in result.flags[0]
+    assert "45-second budget" in result.flags[0]
 
     # Inside the budget, and a shade over it, are both fine.
-    assert check_script_length("\n".join(["VO: word word"] * 40), directive) == []
-    assert check_script_length("\n".join(["VO: word word"] * 48), directive) == []
+    assert not check_script_length("\n".join(["VO: word word"] * 40), directive)
+    assert not check_script_length("\n".join(["VO: word word"] * 48), directive)
+
+
+def test_distance_ranks_two_overrunning_drafts():
+    """Flag count cannot tell 185 words from 140; both carry exactly one flag."""
+    from app.crews.content_factory import check_script_length
+
+    directive = "Regaining ground | Format: Instagram Reel, 60 seconds"
+    long_draft = check_script_length("\n".join(["VO: word"] * 185), directive)
+    shorter = check_script_length("\n".join(["VO: word"] * 140), directive)
+
+    assert len(long_draft.flags) == len(shorter.flags) == 1
+    assert shorter.distance < long_draft.distance
+    # In budget is distance zero, and beats both.
+    assert check_script_length("\n".join(["VO: word"] * 110), directive).distance == 0
 
 
 def test_an_unmarked_script_is_flagged_rather_than_silently_passing():
     # Without the marker the budget cannot be measured. Saying so beats a green
-    # result that means "not checked".
+    # result that means "not checked", and unmeasurable must rank worse than any
+    # measurable draft so a countable rewrite wins.
     from app.crews.content_factory import check_script_length
 
-    flags = check_script_length("**Spoken:** nothing is marked", "Format: Reel, 45 seconds")
-    assert len(flags) == 1
-    assert "not marked" in flags[0]
+    result = check_script_length("**Spoken:** nothing is marked", "Format: Reel, 45 seconds")
+    assert len(result.flags) == 1
+    assert "not marked" in result.flags[0]
+    assert result.distance == float("inf")
 
 
 def test_the_scriptwriter_is_told_to_mark_spoken_lines_and_is_checked():
@@ -337,3 +354,118 @@ def test_placeholder_output_is_not_judged_as_a_script(client):
     script = next(e for e in entries if e["artifact_type"] == "script")
     assert script["metadata"]["is_stub"] is True
     assert script["metadata"]["governance_flags"] == []
+
+
+# --------------------------------------------------------------------------- #
+# The revision pass: an overrunning draft is handed back once
+# --------------------------------------------------------------------------- #
+class _ScriptedProvider:
+    """Returns each reply in turn, and records the prompts it was given."""
+
+    name = "scripted"
+    is_stub = False
+
+    def __init__(self, *replies: str) -> None:
+        self._replies = list(replies)
+        self.prompts: list[str] = []
+
+    def generate(self, prompt: str, *, system: str | None = None) -> str:
+        self.prompts.append(prompt)
+        return self._replies.pop(0) if self._replies else self._replies_exhausted()
+
+    def _replies_exhausted(self) -> str:
+        raise AssertionError("the agent asked for more drafts than the test scripted")
+
+
+def _run_with(monkeypatch, provider, directive="Topic | Format: Instagram Reel, 60 seconds"):
+    import tempfile
+    from pathlib import Path
+
+    from app.constitution import BrandConstitution
+    from app.crews import base
+    from app.crews.blackboard import Blackboard, EventBus
+    from app.models import CrewName
+    from app.store import BlackboardStore
+    from app.vault import Vault
+
+    monkeypatch.setattr(base, "get_provider", lambda model, vault: provider)
+    agent = _content_factory_agents()["Scriptwriter"]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        return agent.perform_task(
+            description="write it",
+            directive=directive,
+            crew=CrewName.CONTENT_FACTORY,
+            blackboard=Blackboard(BlackboardStore(Path(tmp) / "bb.json")),
+            event_bus=EventBus(),
+            vault=Vault(),
+            constitution=BrandConstitution({}),
+        )
+
+
+def test_an_overrunning_draft_is_handed_back_and_the_shorter_one_kept(monkeypatch):
+    """185 words for a 60-second reel was the live result. Flagging it changed nothing."""
+    over = "\n".join(["VO: word"] * 185)
+    good = "\n".join(["VO: word"] * 110)
+    provider = _ScriptedProvider(over, good)
+
+    entry = _run_with(monkeypatch, provider)
+
+    assert len(provider.prompts) == 2, "one retry, not a loop"
+    assert entry.payload["output"] == good
+    assert entry.metadata["governance_flags"] == []
+    assert entry.metadata["revised"] is True
+
+    # The retry is told what it missed, and by how much, and sees its own draft.
+    retry = provider.prompts[1]
+    assert "185 spoken words" in retry
+    assert "60-second budget" in retry
+    assert over in retry
+
+
+def test_a_first_draft_inside_the_budget_is_not_revised(monkeypatch):
+    provider = _ScriptedProvider("\n".join(["VO: word"] * 110))
+
+    entry = _run_with(monkeypatch, provider)
+
+    assert len(provider.prompts) == 1, "no retry when nothing is wrong"
+    assert entry.metadata["revised"] is False
+
+
+def test_a_worse_rewrite_is_discarded(monkeypatch):
+    # A rewrite can overshoot the other way. Keeping the newer draft blindly
+    # would ship the worse one.
+    over = "\n".join(["VO: word"] * 140)
+    worse = "\n".join(["VO: word"] * 300)
+    provider = _ScriptedProvider(over, worse)
+
+    entry = _run_with(monkeypatch, provider)
+
+    assert entry.payload["output"] == over
+    assert entry.metadata["revised"] is False
+    assert "140 spoken words" in entry.metadata["governance_flags"][0]
+
+
+def test_a_closer_but_still_long_rewrite_is_kept(monkeypatch):
+    # Both overrun and both carry one flag, so only distance can choose.
+    over = "\n".join(["VO: word"] * 185)
+    closer = "\n".join(["VO: word"] * 140)
+    provider = _ScriptedProvider(over, closer)
+
+    entry = _run_with(monkeypatch, provider)
+
+    assert entry.payload["output"] == closer
+    assert entry.metadata["revised"] is True
+    assert "140 spoken words" in entry.metadata["governance_flags"][0]
+
+
+def test_placeholder_output_is_never_revised(client):
+    # No key means stub text, and a retry would buy a second placeholder.
+    client.post(
+        "/api/crews/content_factory/run",
+        json={"input": "Regaining ground | Format: Instagram Reel, 60 seconds"},
+    )
+    entries = client.get("/api/blackboard").json()
+    script = next(e for e in entries if e["artifact_type"] == "script")
+    assert script["metadata"]["is_stub"] is True
+    assert script["metadata"]["revised"] is False

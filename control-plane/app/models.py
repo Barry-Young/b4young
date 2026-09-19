@@ -174,6 +174,11 @@ class BlackboardEntry(BaseModel):
         """True when placeholder text, not a real model draft."""
         return bool((self.metadata or {}).get("is_stub"))
 
+    @property
+    def was_revised(self) -> bool:
+        """True when a failed check sent the first draft back for a rewrite."""
+        return bool((self.metadata or {}).get("revised"))
+
 
 class CrewRunStatus(str, Enum):
     """Lifecycle of a crew run (which may pause at HITL checkpoints)."""
