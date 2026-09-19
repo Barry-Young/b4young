@@ -40,8 +40,50 @@ def test_the_three_banned_categories_are_all_covered():
     # cosmic (rule 2), clinical (rule 5, a legal line), hype (rule 6).
     banned = {t.lower() for t in BrandConstitution.load().banned_terms}
     assert {"vibrations", "frequencies"} <= banned, "cosmic"
-    assert {"trauma", "anxiety", "healing", "diagnosis"} <= banned, "clinical"
+    assert {"trauma", "anxiety", "healing", "diagnos"} <= banned, "clinical"
     assert {"crush it", "hustle harder"} <= banned, "hype"
+
+
+def test_clinical_stems_catch_the_forms_that_actually_get_written():
+    # The list held only plurals, so "a symptom" and "it triggered" walked past.
+    c = BrandConstitution.load()
+    assert c.check_output("That is a symptom of something.")
+    assert c.check_output("It triggered me.")
+
+
+def test_the_clinical_ban_is_on_diagnosing_a_person_not_on_the_word():
+    """Barry's own essay uses "diagnosed" of a house. The ban is on the act.
+
+    The source document marks the clinical terms a legal line — the brand must
+    not diagnose a reader. Banning the letters also banned one of his own best
+    sentences.
+    """
+    c = BrandConstitution.load()
+
+    # His sentence, from the-hallway.md, passes.
+    assert c.check_output(
+        "The man who walked with customers through their houses and diagnosed "
+        "them is not that far from the man who sits with people doing their "
+        "own diagnosing."
+    ) == []
+
+    # Clinical use, including the denial an agent keeps reaching for, does not.
+    assert c.check_output("It's not a diagnosis.") == ["banned term used: 'diagnos'"]
+    assert c.check_output("You should get a diagnosis.") == ["banned term used: 'diagnos'"]
+
+    # The narrowing is per sentence, so one clean use does not excuse a dirty one.
+    both = c.check_output(
+        "He diagnosed their houses for years. Now he can diagnose your condition."
+    )
+    assert both == ["banned term used: 'diagnos'"]
+
+
+def test_agents_are_told_not_to_name_a_banned_term_in_order_to_deny_it():
+    # Two live runs produced "It's not a diagnosis" — sensible writing that
+    # still puts the word in front of the reader, and still trips the check.
+    prompt = BrandConstitution.load().system_prompt("Strategist", "Plan", "")
+    assert "in order to deny it" in prompt
+    assert "clinical sense only" in prompt
 
 
 def test_the_trade_vocabulary_is_preferred():

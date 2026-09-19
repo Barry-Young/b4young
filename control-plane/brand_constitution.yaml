@@ -12,7 +12,7 @@
 #
 # The Control Plane injects this into every agent run and flags banned terms on
 # output (docs/05-governance-security.md, 5.1).
-version: "2.0.0"
+version: "2.1.0"
 
 voice:
   tone: >-
@@ -79,12 +79,22 @@ banned_terms:
   - "vibrations"
   - "frequencies"
   - "the universe has a plan"
-  # clinical
-  - "symptoms"
-  - "triggers"
+  # clinical — the source document marks this a legal line, not a style choice:
+  # the brand must not diagnose a reader. The ban is on that act, not on the
+  # letters. Where Barry uses one of these words himself in a non-clinical
+  # sense, `unless` carries a pattern that must appear in the same sentence for
+  # the use to pass. It is a heuristic and can be wrong either way; the flag is
+  # advisory and never blocks a run.
+  - "symptom"
+  - "trigger"
   - "trauma"
   - "anxiety"
-  - "diagnosis"
+  - term: "diagnos"
+    # The Hallway essay: "The man who walked with customers through their houses
+    # and diagnosed them is not that far from the man who sits with people doing
+    # their own diagnosing." That is the trade sense — diagnosing a house — and
+    # it is his, so it passes. Diagnosing a person does not.
+    unless: "house|houses|home|homes|customer|their own|room|wall|roof|floor"
   - "healing"
   - "treatment"
   # hype
